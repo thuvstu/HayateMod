@@ -1,0 +1,56 @@
+id: solommo:soot_spear
+name: 煤けた投槍
+family: spear
+rarity: rare
+item_level: 14
+tags_extra: [content:boss_hunt]
+role_hint: [dps]
+skills:
+  primary:
+    core: melee_thrust
+    mods: {element: fire, range: 4, width: 0.35}
+    effects:
+      - trigger: on_hit
+        conditions:
+          - type: sneaking
+          - type: holding
+            name: solommo:soot_spear
+        actions:
+          - type: spawn_projectiles
+            count: 1
+            damage_mult: 0.4
+            target: nearest_enemy_in_radius
+            radius: 6
+            inherit_tags: [element:fire]
+        flags:
+          prevent_recursive: [spawn_projectiles]
+          max_chain_depth: 3
+  special:
+    core: projectile_single
+    mods: {element: fire, range: 26, cooldown: 3}
+    effects:
+      - trigger: on_hit
+        conditions:
+          - type: raining
+        actions:
+          - type: strike
+            damage_mult: 1.0
+        flags:
+          prevent_recursive: []
+          max_chain_depth: 3
+      - trigger: on_kill
+        actions:
+          - type: spawn_projectiles
+            count: 1
+            damage_mult: 0.4
+            target: nearest_enemy_in_radius
+            radius: 6
+            inherit_tags: [element:fire]
+          - type: feed
+            amount: 4
+          - type: xp
+            amount: 5
+        flags:
+          prevent_recursive: [spawn_projectiles]
+          max_chain_depth: 3
+design_note: "遠距離寄りの投槍。"

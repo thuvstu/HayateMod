@@ -1,0 +1,18 @@
+{
+  "display": {
+    "icon": {"id": "hayatemod:ember_edge"},
+    "title": "陽炎のソロ",
+    "description": "最初の武器を手に入れる",
+    "background": "minecraft:textures/gui/advancements/backgrounds/adventure.png",
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "weapon": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {"items": [{"items": ["hayatemod:ember_edge", "hayatemod:ashbrand", "hayatemod:earthshaker", "hayatemod:slag_cleaver", "hayatemod:zephyr_edge", "hayatemod:cinder_pike", "hayatemod:ember_branch", "hayatemod:soot_spear", "hayatemod:ashen_call", "hayatemod:cinder_staff", "hayatemod:pyre_staff"]}]}
+    }
+  }
+}

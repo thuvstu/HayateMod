@@ -1,0 +1,9 @@
+id: solommo:bad_loot
+direct:
+  - {item: solommo:a, p: 0.7}
+  - {item: solommo:b, p: 0.5}
+pity:
+  currency: pity_shard
+  per_kill: 1
+  exchange: null
+materials: []

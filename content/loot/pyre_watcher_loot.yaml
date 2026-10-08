@@ -1,0 +1,13 @@
+﻿# watcher rewards (directなし)
+id: solommo:pyre_watcher_loot
+direct: []
+pity:
+  currency: pity_shard
+  per_kill: 1
+  exchange: null
+materials:
+  - { item: craft_material, count: [2, 3] }
+  - { item: solommo:ember_glass, count: [1, 1] }
+runes:
+  - { id: solommo:kindling_rune, p: 0.3 }
+  - { id: solommo:pyre_rune, p: 0.2 }

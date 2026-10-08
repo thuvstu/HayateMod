@@ -1,0 +1,12 @@
+id: solommo:flame_breath
+name: 火炎の息吹
+core: projectile_single
+mods:
+  element: fire
+  range: 12
+  width: 2.5
+  cast_time: 2
+signal: MOVE_TO_SAFE_SPOT
+telegraph: true
+lethal: false
+

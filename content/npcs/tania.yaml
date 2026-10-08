@@ -1,0 +1,5 @@
+id: solommo:tania
+name: ターニャ
+role: tank
+capabilities: [interrupt]
+proficiency: 0.8

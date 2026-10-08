@@ -1,0 +1,62 @@
+id: solommo:flame_golem
+name: 灰燼のゴーレム
+
+party:
+  size: 4
+  required_roles:
+    tank: 1
+    healer: 1
+    dps: 2
+  required_capabilities: [interrupt]
+
+arena:
+  template: solommo:flame_golem_arena
+  markers:
+    stack_point: [0, 0, 0]
+    safe_spots:
+      - [-8, 0, 6]
+      - [8, 0, 6]
+      - [0, 0, -9]
+
+time_budget:
+  target_minutes: 12
+  soft_enrage_minutes: 18
+
+checkpoints: [p2]
+
+abilities:
+  solommo:molten_slam:
+    core: heavy_slam
+    mods:
+      element: fire
+      radius: 6
+      cast_time: 3
+    target: party
+    center: marker:stack_point
+    split_damage: true
+    signal: STACK
+    telegraph: true
+    lethal: true
+    lethal_ratio: 1.4
+
+phases:
+  - id: p1
+    hp_range: [100, 60]
+    loop_period_seconds: 50
+    timeline:
+      - {at_seconds: 8, ability: solommo:flame_breath}
+      - {at_seconds: 14, ability: solommo:molten_charge}
+      - {at_seconds: 20, ability: solommo:ember_toss}
+      - {at_seconds: 30, ability: solommo:searing_grip}
+      - {at_seconds: 42, ability: solommo:molten_slam}
+
+  - id: p2
+    hp_range: [60, 0]
+    loop_period_seconds: 55
+    on_enter:
+      - {ability: solommo:summon_cinders}
+    timeline:
+      - {at_seconds: 5, ability: solommo:flame_breath}
+      - {at_seconds: 15, ability: solommo:lava_spread}
+      - {at_seconds: 30, ability: solommo:meltdown}
+      - {at_seconds: 45, ability: solommo:molten_slam}

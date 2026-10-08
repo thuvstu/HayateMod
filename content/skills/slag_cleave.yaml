@@ -1,0 +1,10 @@
+id: solommo:slag_cleave
+name: 鉱滓薙ぎ
+core: heavy_slam
+mods:
+  element: fire
+  radius: 5
+  cooldown: 8
+signal: BRACE
+telegraph: true
+lethal: false

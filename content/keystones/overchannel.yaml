@@ -1,0 +1,7 @@
+id: solommo:overchannel
+name: 過充填
+desc: "全ダメージ×1.25。"
+chain_bonus: 0
+damage_mult: 1.25
+cooldown_mult: 1.0
+melee_mult: 1.0

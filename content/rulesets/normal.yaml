@@ -1,0 +1,13 @@
+# 難易度ルールセット：通常（基準）
+id: solommo:normal
+extends_global: true
+enemy:
+  hp_mult: 1.0
+  effective_dps_mult: 1.0
+rewards:
+  pity_shard_mult: 1.0
+  craft_material_mult: 1.0
+# tag overrides の例：ボスは HP のみ上乗せ（個別ID上書きは増やさない）
+tag_overrides:
+  - tag: rank:boss
+    enemy: { hp_mult: 1.0 }

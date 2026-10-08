@@ -1,0 +1,30 @@
+id: solommo:ashbrand
+name: 灰の烙印剣
+family: sword
+rarity: rare
+item_level: 16
+tags_extra: [content:boss_hunt]
+role_hint: [dps]
+skills:
+  primary:
+    core: melee_thrust
+    mods: {element: fire, range: 3, width: 0.5}
+    effects:
+      - trigger: on_hit
+        conditions:
+          - type: target_has_status
+            status: ignite
+        actions:
+          - type: spawn_projectiles
+            count: 1
+            damage_mult: 0.4
+            target: nearest_enemy_in_radius
+            radius: 6
+            inherit_tags: [element:fire]
+        flags:
+          prevent_recursive: [spawn_projectiles]
+          max_chain_depth: 3
+  special:
+    core: projectile_single
+    mods: {element: fire, range: 24, cooldown: 3}
+design_note: "燃焼特化の中堅剣。"

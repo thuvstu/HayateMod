@@ -1,0 +1,9 @@
+id: solommo:flame_golem
+name: 灰燼のゴーレム
+level: 20
+rank: boss
+species: golem
+boss_body: ravager
+tags: [element:fire]
+skills: [solommo:flame_breath, solommo:ember_toss, solommo:searing_grip, solommo:molten_slam, solommo:lava_spread, solommo:summon_cinders, solommo:meltdown]
+loot: solommo:flame_golem_loot

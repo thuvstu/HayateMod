@@ -1,0 +1,69 @@
+id: solommo:ember_branch
+name: 枝分かれする熾火の投槍
+family: spear
+rarity: unique
+item_level: 20
+tags_extra: [content:field_clear]
+role_hint: [dps]
+
+skills:
+  primary:
+    core: melee_thrust
+    mods:
+      element: fire
+      range: 4
+      width: 0.35
+    effects:
+      - trigger: on_kill
+        actions:
+          - type: spawn_projectiles
+            count: 2
+            damage_mult: 0.3
+            target: nearest_enemy_in_radius
+            radius: 6
+            inherit_tags: [element:fire]
+        flags:
+          prevent_recursive: [spawn_projectiles]
+          max_chain_depth: 3
+
+  special:
+    core: projectile_single
+    mods:
+      element: fire
+      range: 24
+      cooldown: 3
+      resource: stamina
+      resource_cost: 10
+    effects:
+      - trigger: on_hit
+        conditions:
+          - type: target_has_status
+            status: ignite
+        actions:
+          - type: spawn_projectiles
+            count: 2
+            damage_mult: 0.45
+            target: look
+            radius: 6
+            inherit_tags: [element:fire]
+          - type: particles
+            effect: flame
+        flags:
+          prevent_recursive: [spawn_projectiles]
+          max_chain_depth: 3
+      - trigger: on_hit
+        conditions:
+          - type: has_effect
+            name: speed
+        actions:
+          - type: spawn_projectiles
+            count: 1
+            damage_mult: 0.45
+            target: look
+            radius: 6
+            inherit_tags: [element:fire]
+        flags:
+          prevent_recursive: [spawn_projectiles]
+          max_chain_depth: 3
+
+design_note: "燃焼中の敵に当てると火の粉が枝分かれする。"

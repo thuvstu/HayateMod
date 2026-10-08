@@ -1,0 +1,53 @@
+// tools: CLI entry points (validate / report / drop solver) over core.
+
+plugins {
+    id 'java'
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation project(':core')
+}
+
+def contentDir = rootProject.file("content").absolutePath
+
+tasks.register("validateContent", JavaExec) {
+    group = "solommo"
+    description = "Load + validate the Content Pack (exit 1 on ERROR)."
+    workingDir = rootProject.projectDir
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = "com.thuvstu.hayatemod.tools.ValidateMain"
+    args = [contentDir]
+}
+
+tasks.register("contentReport", JavaExec) {
+    group = "solommo"
+    description = "Reference index, unused vocabulary, weapon tooltips."
+    workingDir = rootProject.projectDir
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = "com.thuvstu.hayatemod.tools.ReportMain"
+    args = [contentDir]
+}
+
+tasks.register("dropSolve", JavaExec) {
+    group = "solommo"
+    description = "Drop-rate solver. Pass -PcliArgs=\"<E> <G>\"."
+    workingDir = rootProject.projectDir
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = "com.thuvstu.hayatemod.tools.DropSolveMain"
+    def extra = findProperty("cliArgs")?.toString()?.split("\\s+")?.toList() ?: []
+    args = extra
+}
+
+tasks.register("marketSim", JavaExec) {
+    group = "solommo"
+    description = "NPC-market projection. Pass -PcliArgs=\"[days] [dumpDay dumpItem dumpCount]\"."
+    workingDir = rootProject.projectDir
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = "com.thuvstu.hayatemod.tools.MarketSimMain"
+    def extra = findProperty("cliArgs")?.toString()?.split("\\s+")?.toList() ?: []
+    args = [contentDir] + extra
+}

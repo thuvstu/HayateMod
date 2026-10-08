@@ -1,0 +1,14 @@
+# 灰燼のゴーレムの報酬（暫定）
+# 15分/周・確定12周・期待8周 → 直ドロップ率 約7.7%（§5.10）
+id: solommo:flame_golem_loot
+direct:
+  - item: solommo:ember_branch
+    p: 0.077
+pity:
+  currency: pity_shard
+  per_kill: 1
+  exchange: { cost: 12, item: solommo:ember_branch }
+materials:
+  - { item: craft_material, count: [3, 5] }
+runes:
+  - { id: solommo:hunter_rune, p: 0.25 }

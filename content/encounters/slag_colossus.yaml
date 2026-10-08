@@ -1,0 +1,44 @@
+id: solommo:slag_colossus
+name: スラグ・コロッサス戦
+
+party:
+  size: 4
+  required_roles:
+    tank: 1
+    healer: 1
+    dps: 2
+  required_capabilities: [interrupt]
+
+arena:
+  template: solommo:flame_golem_arena
+  markers:
+    stack_point: [0, 0, 0]
+    safe_spots:
+      - [-8, 0, 6]
+      - [8, 0, 6]
+      - [0, 0, -9]
+
+time_budget:
+  target_minutes: 8
+  soft_enrage_minutes: 12
+
+checkpoints: [p2]
+
+phases:
+  - id: p1
+    hp_range: [100, 55]
+    loop_period_seconds: 40
+    timeline:
+      - {at_seconds: 6, ability: solommo:ember_toss}
+      - {at_seconds: 14, ability: solommo:slag_cleave}
+      - {at_seconds: 24, ability: solommo:lava_spread}
+
+  - id: p2
+    hp_range: [55, 0]
+    loop_period_seconds: 45
+    on_enter:
+      - {ability: solommo:summon_cinders}
+    timeline:
+      - {at_seconds: 8, ability: solommo:slag_cleave}
+      - {at_seconds: 20, ability: solommo:meltdown}
+      - {at_seconds: 32, ability: solommo:molten_slam}

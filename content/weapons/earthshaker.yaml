@@ -1,0 +1,43 @@
+id: solommo:earthshaker
+name: 地鳴りの大剣
+family: sword
+rarity: unique
+item_level: 18
+tags_extra: [content:boss_hunt]
+role_hint: [dps]
+skills:
+  primary:
+    core: melee_thrust
+    mods: {element: fire, range: 3, width: 0.8}
+    effects:
+      - trigger: on_hit
+        conditions:
+          - type: health_below
+            value: 0.3
+        actions:
+          - type: knockback
+            damage_mult: 2.0
+        flags:
+          prevent_recursive: []
+          max_chain_depth: 3
+      - trigger: on_hit
+        conditions:
+          - type: entity_type
+            name: entity.minecraft.iron_golem
+        actions:
+          - type: strike
+            damage_mult: 1.0
+        flags:
+          prevent_recursive: []
+          max_chain_depth: 3
+      - trigger: on_kill
+        actions:
+          - type: summon
+            ref: solommo:cinder_husk
+        flags:
+          prevent_recursive: []
+          max_chain_depth: 3
+  special:
+    core: heavy_slam
+    mods: {element: fire, radius: 5, cooldown: 8}
+design_note: "範囲強打の三本目のユニーク。A6の遊び方変化を担う。"

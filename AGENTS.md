@@ -1,0 +1,2 @@
+C:\Users\gogok\Documents\programming\AIStorage\MCAssetGen をアセット生成に利用していただいて,好きに使っていただいて構いません。むしろ有効活用してください。
+レビューまでやってから次へ進め

@@ -1,0 +1,7 @@
+id: solommo:ash_spit
+name: 灰吐き
+core: projectile_single
+mods:
+  element: fire
+  range: 16
+  cooldown: 4

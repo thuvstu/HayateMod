@@ -1,0 +1,85 @@
+# 実行語彙の正本（最小・Phase 0）
+# Phase 1 の検証器はここに無い語をエラーにする。勝手に語を増やさない。
+skill_cores:
+  - melee_thrust
+  - projectile_single
+  - heavy_slam
+  - summon_minions
+  - dash
+triggers:
+  - on_hit
+  - on_kill
+  - on_damaged
+  - on_break
+  - on_death
+  - on_timer
+  - on_join
+conditions:
+  - target_has_status
+  - chance
+  - sneaking
+  - health_below
+  - holding
+  - has_effect
+  - variable
+  - altitude
+  - burning
+  - day
+  - night
+  - raining
+  - entity_type
+actions:
+  - spawn_projectiles
+  - dash
+  - heal_self
+  - apply_status
+  - blink
+  - leap
+  - knockback
+  - strike
+  - ignite
+  - extinguish
+  - potion
+  - cleanse
+  - summon
+  - lightning
+  - explosion
+  - particles
+  - sound
+  - message
+  - feed
+  - xp
+  - dropitem
+  - giveitem
+  - setvar
+  - addvar
+  - cast
+  - delay
+  - missile
+  - repeat
+statuses:
+  - ignite
+elements:
+  - fire
+signals:
+  - AVOID_AREA
+  - SPREAD
+  - STACK
+  - BRACE
+  - INTERRUPT_CAST
+  - TANK_SWAP
+  - FOCUS_ADDS
+  - MOVE_TO_SAFE_SPOT
+# タグは用途別の名前空間で管理。role_hint / slot_tags と混用しない。
+tag_namespaces:
+  - element
+  - delivery
+  - status
+  - role
+  - content
+  - slot
+# 効果の実行時上限（静的解析＋ランタイム防御の共通値）
+limits:
+  max_chain_depth: 3
+  max_projectiles: 8
+  max_radius: 12.0

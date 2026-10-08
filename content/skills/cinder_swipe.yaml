@@ -1,0 +1,7 @@
+id: solommo:cinder_swipe
+name: 煤払い
+core: melee_thrust
+mods:
+  element: fire
+  range: 2
+  width: 1.5

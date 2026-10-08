@@ -1,0 +1,30 @@
+# 採掘スキル（§5.14）。到達アンロック重視。数値は暫定で実測調整する。
+# 鉄系はLv5未満では採掘不可（ゲーム内で破壊キャンセル）。宝石枠はLv15で解禁。
+ores:
+  minecraft:coal_ore: 5
+  minecraft:deepslate_coal_ore: 5
+  minecraft:copper_ore: 8
+  minecraft:deepslate_copper_ore: 8
+  minecraft:iron_ore: 10
+  minecraft:deepslate_iron_ore: 10
+  minecraft:gold_ore: 20
+  minecraft:deepslate_gold_ore: 20
+  minecraft:redstone_ore: 12
+  minecraft:deepslate_redstone_ore: 12
+  minecraft:lapis_ore: 15
+  minecraft:deepslate_lapis_ore: 15
+  minecraft:diamond_ore: 50
+  minecraft:deepslate_diamond_ore: 50
+  minecraft:emerald_ore: 40
+  minecraft:deepslate_emerald_ore: 40
+  minecraft:nether_quartz_ore: 15
+levels:
+  - { level: 1, xp_required: 0, unlocks: ["stone"] }
+  - { level: 5, xp_required: 200, unlocks: ["iron"] }
+  - { level: 10, xp_required: 800, unlocks: ["weak_spots"] }
+  - { level: 15, xp_required: 2000, unlocks: ["gem_slots"] }
+  - { level: 20, xp_required: 4000, unlocks: ["danger_mine"] }
+gem_bonus:
+  min_level: 15
+  ores: [minecraft:diamond_ore, minecraft:deepslate_diamond_ore, minecraft:emerald_ore, minecraft:deepslate_emerald_ore]
+  bonus_materials: 1

@@ -1,0 +1,15 @@
+id: solommo:spark_rune
+name: 火花のルーン
+flavor: "当たれば散る。当たれば散る。"
+effects:
+  - trigger: on_hit
+    actions:
+      - type: spawn_projectiles
+        count: 2
+        damage_mult: 0.2
+        target: nearest_enemy_in_radius
+        radius: 4
+        inherit_tags: [element:fire]
+    flags:
+      prevent_recursive: [spawn_projectiles]
+      max_chain_depth: 3

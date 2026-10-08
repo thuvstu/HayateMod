@@ -1,0 +1,7 @@
+id: solommo:quicksilver
+name: 水銀の身
+desc: "クールダウン×0.75。"
+chain_bonus: 0
+damage_mult: 1.0
+cooldown_mult: 0.75
+melee_mult: 1.0

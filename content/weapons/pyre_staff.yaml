@@ -1,0 +1,38 @@
+id: solommo:pyre_staff
+name: 火葬の杖
+family: staff
+rarity: rare
+item_level: 18
+tags_extra: [content:boss_hunt]
+role_hint: [dps]
+skills:
+  primary:
+    core: melee_thrust
+    mods: {element: fire, range: 2, width: 1.2}
+  special:
+    core: projectile_single
+    mods: {element: fire, range: 30, cooldown: 4, resource: mana, resource_cost: 15}
+    effects:
+      - trigger: on_hit
+        actions:
+          - type: spawn_projectiles
+            count: 1
+            damage_mult: 0.5
+            target: nearest_enemy_in_radius
+            radius: 8
+            inherit_tags: [element:fire]
+          - type: strike
+            damage_mult: 0.3
+        flags:
+          prevent_recursive: [spawn_projectiles]
+          max_chain_depth: 3
+      - trigger: on_hit
+        conditions:
+          - type: burning
+        actions:
+          - type: strike
+            damage_mult: 0.5
+        flags:
+          prevent_recursive: []
+          max_chain_depth: 3
+design_note: "長射程の火葬杖。"

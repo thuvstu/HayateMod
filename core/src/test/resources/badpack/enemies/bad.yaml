@@ -1,0 +1,7 @@
+id: solommo:bad_mob
+name: 壊れた敵
+level: 3
+rank: trash
+species: zombie
+skills: [nope_skill]
+loot: solommo:nope_loot

@@ -1,0 +1,11 @@
+id: solommo:summon_cinders
+name: 煤の子分召喚
+core: summon_minions
+mods:
+  element: fire
+  count: 3
+  cooldown: 30
+  enemy: solommo:cinder_husk
+signal: FOCUS_ADDS
+telegraph: false
+lethal: false

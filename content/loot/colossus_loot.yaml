@@ -1,0 +1,12 @@
+id: solommo:colossus_loot
+direct:
+  - item: solommo:slag_cleaver
+    p: 0.077
+pity:
+  currency: pity_shard
+  per_kill: 2
+  exchange: null
+materials:
+  - { item: craft_material, count: [3, 5] }
+runes:
+  - { id: solommo:spark_rune, p: 0.3 }

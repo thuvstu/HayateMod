@@ -1,0 +1,46 @@
+id: solommo:slag_maul
+name: 鉱滓のモール
+family: sword
+rarity: rare
+item_level: 14
+tags_extra: [content:field_clear]
+role_hint: [dps]
+skills:
+  primary:
+    core: melee_thrust
+    mods: {element: fire, range: 3, width: 0.8}
+    effects:
+      - trigger: on_hit
+        conditions:
+          - type: burning
+        actions:
+          - type: strike
+            damage_mult: 0.5
+        flags:
+          prevent_recursive: []
+          max_chain_depth: 3
+  special:
+    core: heavy_slam
+    mods: {element: fire, radius: 5, cooldown: 7}
+    effects:
+      - trigger: on_hit
+        scope: area
+        radius: 5
+        actions:
+          - type: knockback
+            damage_mult: 1.0
+        flags:
+          prevent_recursive: []
+          max_chain_depth: 3
+  heavy:
+    core: melee_thrust
+    mods: {element: fire, range: 3, width: 0.8, cooldown: 12}
+    effects:
+      - trigger: on_hit
+        actions:
+          - type: summon
+            ref: solommo:cinder_husk
+        flags:
+          prevent_recursive: []
+          max_chain_depth: 3
+design_note: "燃える敵への追撃・範囲薙ぎ・残骸呼び。欲張り大槌。"

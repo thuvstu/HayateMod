@@ -1,0 +1,91 @@
+plugins {
+    id 'fabric-loom' version '1.14-SNAPSHOT'
+    id 'maven-publish'
+}
+
+base {
+    archivesName = project.archives_base_name
+}
+
+loom {
+    splitEnvironmentSourceSets()
+
+    mods {
+        "hayatemod" {
+            sourceSet sourceSets.main
+            sourceSet sourceSets.client
+        }
+    }
+
+    runs {
+        client {
+            client()
+            // Relative to the mod project dir: reuses the repo-root run/ world.
+            runDir "../run"
+        }
+        server {
+            server()
+            // Separate dir so a running client does not lock logs/worlds.
+            runDir "../run-server"
+        }
+    }
+}
+
+fabricApi {
+    configureDataGeneration {
+        client = true
+    }
+}
+
+repositories {
+    // Loom adds the essential maven repositories automatically.
+}
+
+dependencies {
+    minecraft "com.mojang:minecraft:${project.minecraft_version}"
+    mappings loom.officialMojangMappings()
+    modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
+    modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
+
+    // core: pure-Java gameplay data/rules. Its `implementation` deps (snakeyaml)
+    // surface on the runtime classpath, and `include` bundles them into the mod jar.
+    implementation project(':core')
+    include "org.yaml:snakeyaml:2.3"
+}
+
+processResources {
+    inputs.property "version", project.version
+    inputs.property "minecraft_version", project.minecraft_version
+    inputs.property "loader_version", project.loader_version
+    filteringCharset "UTF-8"
+
+    filesMatching("fabric.mod.json") {
+        expand "version": project.version,
+                "minecraft_version": project.minecraft_version,
+                "loader_version": project.loader_version
+    }
+
+    // Bundle the Content Pack (dev runs read ./content or ../content).
+    from(rootProject.file("content")) {
+        into("content")
+    }
+}
+
+// Merge core classes into the mod jar so remapJar ships a single artifact.
+jar {
+    from project(':core').sourceSets.main.output
+    from(rootProject.file("LICENSE")) {
+        rename { "${it}_${project.archives_base_name}" }
+    }
+}
+
+publishing {
+    publications {
+        create("mavenJava", MavenPublication) {
+            artifactId = project.archives_base_name
+            from components.java
+        }
+    }
+    repositories {
+    }
+}

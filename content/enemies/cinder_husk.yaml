@@ -1,0 +1,8 @@
+id: solommo:cinder_husk
+name: 煤の残骸
+level: 18
+rank: trash
+species: husk
+tags: [element:fire]
+skills: [solommo:cinder_swipe]
+loot: solommo:cinder_husk_loot

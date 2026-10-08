@@ -1,0 +1,20 @@
+// core: pure Java. No Minecraft classes on any classpath (enforced by construction).
+
+plugins {
+    id 'java-library'
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation "org.yaml:snakeyaml:2.3"
+
+    testImplementation "org.junit.jupiter:junit-jupiter:5.11.4"
+    testRuntimeOnly "org.junit.platform:junit-platform-launcher"
+}
+
+tasks.withType(Test).configureEach {
+    useJUnitPlatform()
+}

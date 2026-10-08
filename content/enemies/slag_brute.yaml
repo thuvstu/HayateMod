@@ -1,0 +1,8 @@
+id: solommo:slag_brute
+name: 鉱滓の荒武者
+level: 18
+rank: elite
+species: zombie
+tags: [element:fire]
+skills: [solommo:slag_cleave, solommo:cinder_swipe]
+loot: solommo:slag_brute_loot

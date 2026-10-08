@@ -1,0 +1,42 @@
+// Root build: shared coordinates and convenience aliases.
+// Module layout follows IMPLEMENTATION.md §6.1: core (pure Java) / mod (Fabric) / tools (CLI).
+
+subprojects {
+    group = project.maven_group
+    version = project.mod_version
+
+    plugins.withId('java') {
+        java {
+            def targetJavaVersion = 21
+            toolchain {
+                languageVersion = JavaLanguageVersion.of(targetJavaVersion)
+            }
+            withSourcesJar()
+        }
+        tasks.withType(JavaCompile).configureEach {
+            options.encoding = "UTF-8"
+            options.release.set(21)
+        }
+    }
+}
+
+// Convenience aliases so ./gradlew validateContent etc. keep working from the root.
+tasks.register("validateContent") {
+    group = "solommo"
+    dependsOn(":tools:validateContent")
+}
+
+tasks.register("contentReport") {
+    group = "solommo"
+    dependsOn(":tools:contentReport")
+}
+
+tasks.register("dropSolve") {
+    group = "solommo"
+    dependsOn(":tools:dropSolve")
+}
+
+tasks.register("marketSim") {
+    group = "solommo"
+    dependsOn(":tools:marketSim")
+}

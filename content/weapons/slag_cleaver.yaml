@@ -1,0 +1,51 @@
+id: solommo:slag_cleaver
+name: 鉱滓の大鉈
+family: sword
+rarity: rare
+item_level: 12
+tags_extra: [content:field_clear]
+role_hint: [tank]
+skills:
+  primary:
+    core: melee_thrust
+    mods: {element: fire, range: 3, width: 0.8}
+    effects:
+      - trigger: on_kill
+        actions:
+          - type: spawn_projectiles
+            count: 1
+            damage_mult: 0.3
+            target: nearest_enemy_in_radius
+            radius: 6
+            inherit_tags: [element:fire]
+          - type: potion
+            effect: strength
+            amount: 10
+        flags:
+          prevent_recursive: [spawn_projectiles]
+          max_chain_depth: 3
+      - trigger: on_break
+        conditions:
+          - type: chance
+            value: 0.3
+        actions:
+          - type: heal_self
+            amount: 4
+        flags:
+          prevent_recursive: []
+          max_chain_depth: 3
+      - trigger: on_break
+        conditions:
+          - type: chance
+            value: 0.15
+        actions:
+          - type: dropitem
+            ref: craft_material
+            count: 1
+        flags:
+          prevent_recursive: []
+          max_chain_depth: 3
+  special:
+    core: projectile_single
+    mods: {element: fire, range: 18, cooldown: 5}
+design_note: "タンク向けの重い刃。"

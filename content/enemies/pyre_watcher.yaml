@@ -1,0 +1,8 @@
+id: solommo:pyre_watcher
+name: 火葬の見張り
+level: 20
+rank: named
+species: blaze
+tags: [element:fire]
+skills: [solommo:pyre_nova, solommo:ember_toss]
+loot: solommo:pyre_watcher_loot

@@ -1,0 +1,32 @@
+id: solommo:cinder_staff
+name: 煤の杖
+family: staff
+rarity: rare
+item_level: 10
+tags_extra: [content:field_clear]
+role_hint: [dps]
+skills:
+  primary:
+    core: melee_thrust
+    mods: {element: fire, range: 2, width: 1.2}
+  special:
+    core: projectile_single
+    mods: {element: fire, range: 24, cooldown: 2, interval: 6, radius: 4}
+    effects:
+      - trigger: on_timer
+        actions:
+          - type: apply_status
+            status: ignite
+        flags:
+          prevent_recursive: []
+          max_chain_depth: 3
+      - trigger: on_hit
+        conditions:
+          - type: night
+        actions:
+          - type: strike
+            damage_mult: 0.5
+        flags:
+          prevent_recursive: []
+          max_chain_depth: 3
+design_note: "手数の杖。"

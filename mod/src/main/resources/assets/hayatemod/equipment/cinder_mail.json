@@ -1,0 +1,7 @@
+{
+  "layers": {
+    "humanoid": [{"texture": "hayatemod:cinder_mail"}],
+    "humanoid_leggings": [{"texture": "hayatemod:cinder_mail"}]
+  }
+}
+

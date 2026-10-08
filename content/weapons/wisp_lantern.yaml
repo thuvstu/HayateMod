@@ -1,0 +1,41 @@
+id: solommo:wisp_lantern
+name: 鬼火灯
+family: staff
+rarity: unique
+item_level: 16
+tags_extra: [content:boss_hunt]
+role_hint: [dps]
+skills:
+  primary:
+    core: melee_thrust
+    mods: {element: fire, range: 2, width: 1.2}
+  special:
+    core: projectile_single
+    mods: {element: fire, range: 24, cooldown: 3}
+    effects:
+      - trigger: on_hit
+        actions:
+          - type: missile
+            count: 2
+            damage_mult: 0.6
+            radius: 12
+            distance: 1.6
+            amount: 100
+            inherit_tags: [element:fire]
+        flags:
+          prevent_recursive: [spawn_projectiles]
+          max_chain_depth: 3
+  heavy:
+    core: melee_thrust
+    mods: {element: fire, range: 2, width: 1.2, cooldown: 10}
+    effects:
+      - trigger: on_hit
+        actions:
+          - type: leap
+            distance: 8
+          - type: explosion
+            damage_mult: 1.5
+        flags:
+          prevent_recursive: []
+          max_chain_depth: 3
+design_note: "誘導鬼火と自爆跳躍。灯りの番人の杖。"
