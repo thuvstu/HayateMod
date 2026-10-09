@@ -1,0 +1,73 @@
+{
+	"attributes": {
+		"minecraft:visual/fog_color": "#2A5A66",
+		"minecraft:visual/sky_color": "#0B1C22",
+		"minecraft:visual/ambient_particles": {
+			"argument": [
+				{
+					"particle": {
+						"type": "minecraft:cloud"
+					},
+					"probability": 0.06
+				}
+			],
+			"modifier": "append"
+		},
+		"minecraft:gameplay/natural_mob_spawns": {
+			"argument": {
+				"spawn_costs": {},
+				"spawns_by_category": {
+					"monster": [
+						{
+							"type": "minecraft:ghast",
+							"count": 1,
+							"weight": 40
+						},
+						{
+							"type": "minecraft:blaze",
+							"count": 1,
+							"weight": 60
+						},
+						{
+							"type": "minecraft:magma_cube",
+							"count": {
+								"type": "minecraft:uniform",
+								"max_inclusive": 4,
+								"min_inclusive": 1
+							},
+							"weight": 100
+						}
+					],
+					"creature": []
+				}
+			},
+			"modifier": "overlay"
+		}
+	},
+	"carvers": [
+		"minecraft:nether_cave"
+	],
+	"downfall": 0.0,
+	"effects": {
+		"water_color": "#3f76e4"
+	},
+	"features": [
+		[],
+		[],
+		[],
+		[],
+		[],
+		[],
+		[
+			"hayatemod:gale_ore"
+		],
+		[],
+		[],
+		[],
+		[
+			"hayatemod:gale_ash_disk"
+		]
+	],
+	"has_precipitation": false,
+	"temperature": 2.0
+}

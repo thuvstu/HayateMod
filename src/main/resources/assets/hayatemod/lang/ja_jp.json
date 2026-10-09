@@ -27,5 +27,8 @@
 	"item.hayatemod.gale_chestplate": "疾風の胸当て",
 	"item.hayatemod.gale_leggings": "疾風の腿当て",
 	"item.hayatemod.gale_boots": "疾風のブーツ",
-	"itemTooltip.hayatemod.gale_set": "フルセット: 常に追い風が吹く"
+	"itemTooltip.hayatemod.gale_set": "フルセット: 常に追い風が吹く",
+	"block.hayatemod.gale_ash": "疾風の灰",
+	"trim_material.hayatemod.gale": "疾風の素材",
+	"biome.hayatemod.gale_hollow": "疾風の渓谷"
 }

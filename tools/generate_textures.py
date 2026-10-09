@@ -713,6 +713,25 @@ def boots() -> Canvas:
 	return c
 
 
+def gale_ash() -> Canvas:
+	"""Wind-scoured ash with gale dust settled into it."""
+	c = Canvas(16)
+	base = rgb("565660")
+	c.fill(base)
+	c.speckle(rgb("6B6B72"), 5, seed=21)
+	c.speckle(rgb("4A4A50"), 7, seed=23)
+	for y in range(16):
+		for x in range(16):
+			h = (x * 7 + y * 13) % 19
+			if h == 0:
+				c.set(x, y, mix(base, CRYSTAL, 0.4))
+			elif (x + y * 3) % 23 == 0:
+				c.set(x, y, mix(base, PALE, 0.28))
+	for x, y in ((3, 5), (9, 2), (12, 9), (6, 12), (14, 5)):
+		c.set(x, y, mix(CRYSTAL, SHINE, 0.5))
+	return c
+
+
 # ------------------------------------------------------------------------ icon
 
 
@@ -786,6 +805,7 @@ def targets():
 		ASSETS / "textures" / "block" / "gale_ore.png": ore(STONE, STONE_LIGHT, STONE_DARK, "7FE3F0", "1F4E59"),
 		ASSETS / "textures" / "block" / "deepslate_gale_ore.png":
 			ore(DEEPSLATE, DEEPSLATE_LIGHT, DEEPSLATE_DARK, "7FE3F0", "17131A"),
+		ASSETS / "textures" / "block" / "gale_ash.png": gale_ash(),
 		ASSETS / "icon.png": icon(),
 	}
 

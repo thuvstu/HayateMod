@@ -202,11 +202,19 @@ def check_data_references(item_ids: set[str], block_ids: set[str]) -> None:
 			fail(f"worldgen/placed_feature/{path.stem}: feature {feature} does not exist")
 
 	java = JAVA / "com" / "thuvstu" / "hayatemod" / "worldgen" / "ModWorldgen.java"
-	if java.exists() and placed.exists():
-		source = java.read_text()
-		for path in sorted(placed.glob("*.json")):
-			if f'HayateMod.id("{path.stem}")' not in source:
-				fail(f"ModWorldgen.java does not reference the placed feature {path.stem}")
+	source = java.read_text() if java.exists() else ""
+	from_biomes = set()
+	for path in sorted((DATA / "worldgen" / "biome").glob("*.json")):
+		content = load_json(path) or {}
+		for step in content.get("features", []):
+			if isinstance(step, list):
+				from_biomes.update(entry for entry in step if isinstance(entry, str))
+	for path in sorted(placed.glob("*.json")):
+		in_java = f'HayateMod.id("{path.stem}")' in source
+		in_biome = f"{MOD_ID}:{path.stem}" in from_biomes
+		if not in_java and not in_biome:
+			fail(f"placed feature {path.stem} is referenced neither by ModWorldgen.java "
+			     f"nor by any biome")
 
 	# loot tables: one per block, and only known item drops
 	for path in sorted((DATA / "loot_table" / "blocks").glob("*.json")):
@@ -236,14 +244,15 @@ def check_data_references(item_ids: set[str], block_ids: set[str]) -> None:
 		ingredient = content.get("ingredient")
 		check_id(ingredient.get("item") if isinstance(ingredient, dict) else ingredient, f"recipe/{path.name}")
 
-	# the pickaxe tag should list every block of ours that needs a tool
-	tag = RESOURCES / "data" / "minecraft" / "tags" / "block" / "mineable" / "pickaxe.json"
-	if tag.exists():
+	# every block of ours should be harvestable with some tool
+	tagged = set()
+	for tag in sorted((RESOURCES / "data" / "minecraft" / "tags" / "block" / "mineable").glob("*.json")):
 		content = load_json(tag)
 		if content is not None:
-			for block in sorted(block_ids):
-				if f"{MOD_ID}:{block}" not in content.get("values", []):
-					fail(f"pickaxe tag is missing {block}")
+			tagged.update(value for value in content.get("values", []) if isinstance(value, str))
+	for block in sorted(block_ids):
+		if f"{MOD_ID}:{block}" not in tagged:
+			fail(f"block {block} is not in any mineable/* tag")
 
 
 def png_size(path: pathlib.Path) -> tuple[int, int]:
@@ -276,6 +285,39 @@ def check_animations() -> None:
 					fail(f"{meta.name}: frame {frame} is outside the texture ({height // width} frames)")
 
 
+def check_biomes() -> None:
+	"""Biomes must only point at placed features that exist."""
+	for path in sorted((DATA / "worldgen" / "biome").glob("*.json")):
+		content = load_json(path)
+		if content is None:
+			continue
+		for step in content.get("features", []):
+			if not isinstance(step, list):
+				fail(f"worldgen/biome/{path.name}: features must be a list of lists")
+				continue
+			for feature in step:
+				if not isinstance(feature, str) or not feature.startswith(f"{MOD_ID}:"):
+					continue
+				target = DATA / "worldgen" / "placed_feature" / (feature.split(":", 1)[1] + ".json")
+				if not target.exists():
+					fail(f"worldgen/biome/{path.name}: unknown placed feature {feature}")
+
+
+def check_trim_materials() -> None:
+	directory = DATA / "trim_material"
+	if not directory.exists():
+		return
+	languages = {path.stem: load_json(path) for path in sorted((ASSETS / "lang").glob("*.json"))}
+	for path in sorted(directory.glob("*.json")):
+		content = load_json(path)
+		if content is None:
+			continue
+		key = f"trim_material.{MOD_ID}.{path.stem}"
+		for name, entries in languages.items():
+			if entries is not None and key not in entries:
+				fail(f"{name}.json: missing translation for trim material {path.stem}")
+
+
 def check_equipment() -> None:
 	"""Every equipment asset needs a 64x32 humanoid and humanoid_leggings texture."""
 	directory = DATA / "equipment"
@@ -304,6 +346,8 @@ def main() -> int:
 	check_item_definitions()
 	check_animations()
 	check_equipment()
+	check_biomes()
+	check_trim_materials()
 
 	item_ids, block_ids = registered_ids()
 	check_translations(item_ids, block_ids)

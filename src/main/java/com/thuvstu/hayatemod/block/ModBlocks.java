@@ -45,6 +45,13 @@ public final class ModBlocks {
 	public static final Block DEEPSLATE_GALE_ORE = register(ModBlockItemIds.DEEPSLATE_GALE_ORE, Block::new,
 			BlockBehaviour.Properties.ofFullCopy(Blocks.DEEPSLATE_IRON_ORE));
 
+	/** Wind-scoured ash; carpets the floor of the Gale Hollow. */
+	public static final Block GALE_ASH = register(ModBlockItemIds.GALE_ASH, Block::new,
+			BlockBehaviour.Properties.of()
+					.sound(SoundType.SAND)
+					.strength(0.5F)
+					.requiresCorrectToolForDrops());
+
 	// ------------------------------------------------------------ plumbing
 
 	/** Registers a block and, because a {@link BlockItemId} is used, its block item too. */
@@ -73,6 +80,7 @@ public final class ModBlocks {
 			output.accept(ModBlocks.GALE_LAMP);
 			output.accept(ModBlocks.GALE_ORE);
 			output.accept(ModBlocks.DEEPSLATE_GALE_ORE);
+			output.accept(ModBlocks.GALE_ASH);
 		});
 	}
 }

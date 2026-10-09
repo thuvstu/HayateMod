@@ -27,5 +27,8 @@
 	"item.hayatemod.gale_chestplate": "Gale Chestplate",
 	"item.hayatemod.gale_leggings": "Gale Leggings",
 	"item.hayatemod.gale_boots": "Gale Boots",
-	"itemTooltip.hayatemod.gale_set": "Full set: a permanent tailwind"
+	"itemTooltip.hayatemod.gale_set": "Full set: a permanent tailwind",
+	"block.hayatemod.gale_ash": "Gale Ash",
+	"trim_material.hayatemod.gale": "Gale Material",
+	"biome.hayatemod.gale_hollow": "Gale Hollow"
 }

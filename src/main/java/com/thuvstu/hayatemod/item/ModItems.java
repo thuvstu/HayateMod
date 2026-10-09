@@ -17,6 +17,7 @@ import net.minecraft.core.component.DataComponents;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.component.Consumable;
 import net.minecraft.world.item.equipment.ArmorType;
+import net.minecraft.world.item.equipment.trim.TrimMaterial;
 import net.minecraft.world.item.component.UseCooldown;
 import net.minecraft.world.item.component.Consumables;
 import net.minecraft.world.item.consume_effects.ApplyStatusEffectsConsumeEffect;
@@ -36,11 +37,20 @@ public final class ModItems {
 
 	// ------------------------------------------------------------------ items
 
+	/** The gale trim material, registered by {@code data/hayatemod/trim_material/gale.json}. */
+	public static final ResourceKey<TrimMaterial> GALE_TRIM_MATERIAL = ResourceKey.create(
+			Registries.TRIM_MATERIAL, HayateMod.id("gale"));
+
 	/** Gust + ember, ground into a fine powder. Crafted from a feather and blaze powder. */
 	public static final Item GALE_DUST = register(ModItemIds.GALE_DUST, Item::new, new Item.Properties());
 
-	/** Smelted from {@link #GALE_DUST}. The basic material of the mod. */
-	public static final Item GALE_INGOT = register(ModItemIds.GALE_INGOT, Item::new, new Item.Properties());
+	/**
+	 * Smelted from {@link #GALE_DUST}. The basic material of the mod - and, thanks to
+	 * {@code trimMaterial}, a colour option at the smithing table (see
+	 * {@code data/hayatemod/trim_material/gale.json}).
+	 */
+	public static final Item GALE_INGOT = register(ModItemIds.GALE_INGOT, Item::new,
+			new Item.Properties().trimMaterial(GALE_TRIM_MATERIAL));
 
 	/** A food that also grants Speed II for 15 seconds. */
 	public static final FoodProperties STORM_FRUIT_FOOD = new FoodProperties.Builder()
@@ -151,6 +161,7 @@ public final class ModItems {
 				output.accept(ModBlocks.GALE_LAMP);
 				output.accept(ModBlocks.GALE_ORE);
 				output.accept(ModBlocks.DEEPSLATE_GALE_ORE);
+				output.accept(ModBlocks.GALE_ASH);
 			})
 			.build();
 
