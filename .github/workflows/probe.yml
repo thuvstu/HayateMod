@@ -238,16 +238,14 @@ jobs:
           echo "::notice title=javap:AttributeBuilder::$(javap -cp client.jar 'net.minecraft.world.item.component.ItemAttributeModifiers$Builder' 2>&1 | tr '\n' '~' | tr -s ' ' | head -c 1200)"
           echo "::notice title=javap:AttributeModifier::$(javap -cp client.jar net.minecraft.world.entity.ai.attributes.AttributeModifier 2>&1 | grep -E 'public' | head -10 | tr '\n' '~' | tr -s ' ' | head -c 1000)"
 
-      - name: emit the trim registry, properties and biome api signatures
+      - name: emit the fabric biome api surface
         run: |
           set +e
           cd ci-out
-          echo "::notice title=registries:trim::$(javap -cp client.jar net.minecraft.core.registries.Registries 2>&1 | grep -iE 'trim' | tr '\n' '~' | tr -s ' ' | head -c 900)"
-          echo "::notice title=builtin:trim::$(javap -cp client.jar net.minecraft.core.registries.BuiltInRegistries 2>&1 | grep -iE 'trim' | tr '\n' '~' | tr -s ' ' | head -c 900)"
-          echo "::notice title=properties:trim::$(javap -cp client.jar 'net.minecraft.world.item.Item$Properties' 2>&1 | grep -iE 'trim' | tr '\n' '~' | tr -s ' ' | head -c 900)"
-          echo "::notice title=javap:TrimMaterial-static::$(javap -cp client.jar net.minecraft.world.item.equipment.trim.TrimMaterial 2>&1 | grep -E 'static|record|TrimMaterial\(' | tr '\n' '~' | tr -s ' ' | head -c 1200)"
+          echo "::notice title=jar:fabric-api::$(ls -la fabric-api.jar 2>&1 | tr -s ' ' | head -c 300)"
+          echo "::notice title=classes:fabric-biome::$(grep -i biome fabric-api-classes.txt 2>&1 | head -30 | tr '\n' ' ' | head -c 1600)"
           echo "::notice title=javap:NetherBiomes::$(javap -cp fabric-api.jar:client.jar net.fabricmc.fabric.api.biome.v1.NetherBiomes 2>&1 | tr '\n' '~' | tr -s ' ' | head -c 1200)"
-          echo "::notice title=javap:Climate-params::$(javap -cp client.jar net.minecraft.world.level.biome.Climate 2>&1 | grep -iE 'parameters|ParameterPoint' | tr '\n' '~' | tr -s ' ' | head -c 1200)"
+          echo "::notice title=javap:BiomeModifications::$(javap -cp fabric-api.jar:client.jar net.fabricmc.fabric.api.biome.v1.BiomeModifications 2>&1 | tr '\n' '~' | tr -s ' ' | head -c 1200)"
 
       - name: upload artifact
         uses: actions/upload-artifact@v7
