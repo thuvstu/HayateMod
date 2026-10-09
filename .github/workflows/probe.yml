@@ -249,9 +249,14 @@ jobs:
           set +e
           cd ci-out
           for F in \
-            data/minecraft/recipe/iron_ingot.json \
-            data/minecraft/recipe/iron_ingot_from_blasting.json \
             data/minecraft/tags/block/mineable/pickaxe.json ; do
+          SMELT=$(unzip -l client.jar | awk '{print $4}' | grep -E '^data/minecraft/recipe/.*_from_smelting' | head -1)
+          BLAST=$(unzip -l client.jar | awk '{print $4}' | grep -E '^data/minecraft/recipe/.*_from_blasting' | head -1)
+          SHAPELESS=$(unzip -l client.jar | awk '{print $4}' | grep -E '^data/minecraft/recipe/.*shapeless' | head -1)
+          echo "::notice title=recipe:names::$SMELT $BLAST $SHAPELESS"
+          echo "::notice title=recipe:smelting::$(unzip -p client.jar "$SMELT" 2>&1 | tr -d '\n' | tr -s ' ' | head -c 1200)"
+          echo "::notice title=recipe:blasting::$(unzip -p client.jar "$BLAST" 2>&1 | tr -d '\n' | tr -s ' ' | head -c 1200)"
+          echo "::notice title=recipe:shapeless::$(unzip -p client.jar "$SHAPELESS" 2>&1 | tr -d '\n' | tr -s ' ' | head -c 1200)"
             OUT=$(unzip -p client.jar "$F" 2>&1 | tr -d '\n' | tr -s ' ' | head -c 2400)
             echo "::notice title=data:$F::$OUT"
           done
