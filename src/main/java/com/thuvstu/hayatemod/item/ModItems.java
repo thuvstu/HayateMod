@@ -5,6 +5,7 @@ import java.util.function.Function;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
@@ -96,6 +97,15 @@ public final class ModItems {
 	public static final ResourceKey<CreativeModeTab> HAYATE_TAB_KEY = ResourceKey.create(
 			BuiltInRegistries.CREATIVE_MODE_TAB.key(), HayateMod.id("hayate"));
 
+	/**
+	 * The vanilla tools tab.
+	 *
+	 * <p>{@link CreativeModeTabs} does not expose a constant for every vanilla tab, but the
+	 * registry key is all {@code modifyOutputEvent} needs.
+	 */
+	private static final ResourceKey<CreativeModeTab> TOOLS_TAB = ResourceKey.create(
+			BuiltInRegistries.CREATIVE_MODE_TAB.key(), Identifier.fromNamespaceAndPath("minecraft", "tools"));
+
 	public static final CreativeModeTab HAYATE_TAB = FabricCreativeModeTab.builder()
 			.icon(() -> new ItemStack(ModItems.GALE_INGOT))
 			.title(Component.translatable("creativeTab.hayatemod"))
@@ -155,7 +165,7 @@ public final class ModItems {
 			output.accept(ModItems.GALE_STAFF);
 		});
 
-		CreativeModeTabEvents.modifyOutputEvent(CreativeModeTabs.TOOLS)
+		CreativeModeTabEvents.modifyOutputEvent(TOOLS_TAB)
 				.register(output -> output.accept(ModItems.GALE_PICKAXE));
 	}
 }
