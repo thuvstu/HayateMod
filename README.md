@@ -51,11 +51,13 @@ IDE から開く場合は `build.gradle` を **Gradle プロジェクトとし�
 | ブロック | `hayatemod:gale_ore` | オーバーワールドに生成される鉱石（Y=-48〜88、台形分布） |
 | ブロック | `hayatemod:deepslate_gale_ore` | 深層岩バリアント |
 | エンチャント | `hayatemod:gale_step` | 靴に付与。レベルごとに移動速度 +4%（最大III） |
+| 防具 | `hayatemod:gale_helmet` / `gale_chestplate` / `gale_leggings` / `gale_boots` | 疾風の具足一式（鉄とダイヤの中間程度）。**4部位すべて装備すると移動速度上昇が持続** |
 | クリエイティブタブ | `hayatemod:hayate` | 上記をまとめた独自タブ |
 | コマンド | `/hayate about` | バージョン表示 |
 | コマンド | `/hayate boost [対象] [秒数] [レベル]` | 移動速度上昇を付与（権限レベル2） |
 | イベント | `LootTableEvents.MODIFY` | 石炭鉱石のドロップに疾風の粉を追加 |
 | イベント | `ServerLifecycleEvents.SERVER_STARTED` | 起動時ログ（テンプレート） |
+| イベント | `ServerTickEvents.END_SERVER_TICK` | 疾風の具足のフルセット判定（移動速度 + 風のパーティクル） |
 | ワールド生成 | `BiomeModifications.addFeature` | オーバーワールド全バイオームに疾風鉱石を追加 |
 
 ```
@@ -72,6 +74,10 @@ IDE から開く場合は `build.gradle` を **Gradle プロジェクトとし�
 インゴット x3 + 棒 x2         → 疾風のつるはし      (shaped)
 宝珠 / インゴット / 羽根       → 疾風の杖           (shaped, 斜め)
 疾風の護符 + 宝珠 + 羽根       → 疾風の護符・大     (shapeless)
+疾風のインゴット x5            → 疾風の兜           (shaped)
+疾風のインゴット x8            → 疾風の胸当て       (shaped)
+疾風のインゴット x7            → 疾風の腿当て       (shaped)
+疾風のインゴット x4            → 疾風のブーツ       (shaped)
 ```
 
 日本語（`ja_jp.json`）と英語（`en_us.json`）の翻訳を同梱しています。
@@ -114,6 +120,21 @@ CI では「生成結果がコミット済みか」も見ているので、ス�
 
 アイテムモデルは `minecraft:block/block` を親にしています（`gui_light: side` と標準の
 `display` 変換を継承できるため）。
+
+### 防具の作り方（26.x）
+
+`ArmorItem` クラスは存在しません。手順は以下の3つだけです。
+
+1. `ArmorMaterial` レコードを作る（耐久倍率・部位ごとの防御力・エンチャント適性・装備音・靭性・ノックバック耐性・修理タグ・`EquipmentAsset` のキー）
+2. `data/<ns>/equipment/<id>.json` に `{}` を置いて `EquipmentAsset` を登録する
+   （テクスチャは規約で `assets/<ns>/textures/entity/equipment/humanoid/<id>.png` と
+   `humanoid_leggings/<id>.png` から引かれる。どちらも 64x32）
+3. `new Item(new Item.Properties().humanoidArmor(material, ArmorType.HELMET))` で登録する
+   （`equippable` コンポーネントと防御力の属性はここで付く）
+
+疾風の具足の装備レイヤは、26.3 の実 jar から実測した**バニラ鉄防具のシルエット**を
+`tools/generate_textures.py` 内で疾風カラーに再着色して生成しています（矩形データは
+`ARMOUR_TEMPLATE`、取得方法は `.github/workflows/probe.yml` 参照）。
 
 ### ワールド生成の3点セット
 
