@@ -248,7 +248,7 @@ jobs:
           def read_png(data):
               w = int.from_bytes(data[16:20], 'big')
               h = int.from_bytes(data[20:24], 'big')
-              ctype = data[25]
+              bits, ctype, interlace = data[24], data[25], data[28]
               pos, idat, plte, trns = 8, b'', b'', b''
               while pos < len(data):
                   (ln,) = struct.unpack('>I', data[pos:pos + 4])
@@ -262,13 +262,14 @@ jobs:
                       trns = body
                   pos += 12 + ln
               raw = zlib.decompress(idat)
+              channels = {0: 1, 2: 3, 3: 1, 4: 2, 6: 4}[ctype]
               palette = None
-              bpp = 4 if ctype == 6 else 3
               if ctype == 3:
-                  bpp = 1
                   palette = [(plte[i * 3], plte[i * 3 + 1], plte[i * 3 + 2],
                               trns[i] if i < len(trns) else 255) for i in range(len(plte) // 3)]
-              stride = w * bpp
+              row_bytes = (w * channels * bits + 7) // 8
+              bpp = max(1, (channels * bits) // 8)
+              stride = row_bytes
               out = bytearray()
               prev = bytearray(stride)
               p = 0
@@ -304,13 +305,33 @@ jobs:
                   prev = line
               px = []
               for y in range(h):
+                  line = out[y * stride:(y + 1) * stride]
+                  values = []
+                  if bits == 8:
+                      values = list(line[:w * channels])
+                  elif bits == 4:
+                      for i in range(w):
+                          byte = line[i // 2]
+                          values.append((byte >> 4) if i % 2 == 0 else (byte & 0xF))
+                  elif bits == 2:
+                      for i in range(w):
+                          byte = line[i // 4]
+                          values.append((byte >> (6 - 2 * (i % 4))) & 0x3)
+                  elif bits == 1:
+                      for i in range(w):
+                          byte = line[i // 8]
+                          values.append((byte >> (7 - (i % 8))) & 0x1)
                   row = []
                   for x in range(w):
                       if palette:
-                          row.append(palette[out[y * stride + x]])
+                          row.append(palette[values[x] if x < len(values) else 0])
+                      elif channels >= 3:
+                          i = x * channels
+                          row.append((values[i], values[i + 1], values[i + 2],
+                                      values[i + 3] if channels == 4 else 255))
                       else:
-                          i = y * stride + x * bpp
-                          row.append((out[i], out[i + 1], out[i + 2], out[i + 3] if bpp == 4 else 255))
+                          v = values[x] if x < len(values) else 0
+                          row.append((v, v, v, 255))
                   px.append(row)
               return w, h, px
 
