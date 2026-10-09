@@ -229,6 +229,15 @@ jobs:
           echo "::notice title=properties:armor::$(javap -cp client.jar 'net.minecraft.world.item.Item$Properties' 2>&1 | grep -iE 'armor|equip|humanoid' | tr '\n' '~' | tr -s ' ' | head -c 1500)"
           echo "::notice title=javap:attributes::$(javap -cp client.jar net.minecraft.world.item.component.ItemAttributeModifiers 2>&1 | grep -oE '(public|Builder|ItemAttributeModifiers)[^;]*;' | tr '\n' '~' | head -c 1600)"
 
+      - name: locate the equipment asset registry
+        run: |
+          set +e
+          cd ci-out
+          echo "::notice title=registries:equipment::REG=$(javap -cp client.jar net.minecraft.core.registries.Registries 2>&1 | grep -i equip | tr '\n' '~' | head -c 600) BUILTIN=$(javap -cp client.jar net.minecraft.core.registries.BuiltInRegistries 2>&1 | grep -i equip | tr '\n' '~' | head -c 600)"
+          echo "::notice title=javap:EquipmentAssets-tail::$(javap -cp client.jar net.minecraft.world.item.equipment.EquipmentAssets 2>&1 | tail -12 | tr '\n' '~' | tr -s ' ' | head -c 1200)"
+          echo "::notice title=javap:AttributeBuilder::$(javap -cp client.jar 'net.minecraft.world.item.component.ItemAttributeModifiers$Builder' 2>&1 | tr '\n' '~' | tr -s ' ' | head -c 1200)"
+          echo "::notice title=javap:AttributeModifier::$(javap -cp client.jar net.minecraft.world.entity.ai.attributes.AttributeModifier 2>&1 | grep -E 'public' | head -10 | tr '\n' '~' | tr -s ' ' | head -c 1000)"
+
       - name: dump vanilla armour template textures
         run: |
           set +e
