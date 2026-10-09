@@ -201,6 +201,30 @@ def lamp(lit: bool) -> Canvas:
     return c
 
 
+def ore(base: str, speck: str, shadow: str = "1F4E59") -> Canvas:
+    """Stone-ish base with a few bright crystal clumps."""
+    c = Canvas(16)
+    c.fill(rgb(base))
+
+    # deterministic speckle so re-running the script stays idempotent
+    for y in range(16):
+        for x in range(16):
+            h = (x * 73856093) ^ (y * 19349663)
+            if h % 13 == 0:
+                c.set(x, y, rgb(speck, 70))
+            elif h % 17 == 0:
+                c.set(x, y, rgb(shadow, 120))
+
+    clumps = ((3, 4), (10, 3), (7, 9), (12, 11), (4, 12))
+    for cx, cy in clumps:
+        for dx, dy in ((-1, 0), (1, 0), (0, -1), (0, 1), (0, 0)):
+            c.set(cx + dx, cy + dy, rgb(shadow))
+        c.set(cx, cy, rgb(speck))
+        c.set(cx, cy - 1, rgb("CFF7FF"))
+
+    return c
+
+
 def icon() -> Canvas:
     c = Canvas(128)
     for y in range(128):
@@ -234,6 +258,8 @@ def main() -> None:
         ASSETS / "textures" / "block" / "gale_block.png": gale_block(),
         ASSETS / "textures" / "block" / "gale_lamp_off.png": lamp(False),
         ASSETS / "textures" / "block" / "gale_lamp_on.png": lamp(True),
+        ASSETS / "textures" / "block" / "gale_ore.png": ore("8A8A8E", "7FE3F0"),
+        ASSETS / "textures" / "block" / "deepslate_gale_ore.png": ore("4A4A52", "7FE3F0", "171319"),
         ASSETS / "icon.png": icon(),
     }
 

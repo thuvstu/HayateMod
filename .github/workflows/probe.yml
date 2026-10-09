@@ -339,6 +339,16 @@ jobs:
           echo "::notice title=json:enchant-tags::$(unzip -l client.jar | awk '{print $4}' | grep -E '^data/minecraft/tags/enchantment/' | head -20 | tr '\n' ' ' | head -c 1500)"
           echo "::notice title=json:enchantable-tags::$(unzip -l client.jar | awk '{print $4}' | grep -E '^data/minecraft/tags/item/enchantable/' | head -20 | tr '\n' ' ' | head -c 1500)"
 
+      - name: locate loot tables and movement speed enchantments
+        run: |
+          set +e
+          cd ci-out
+          echo "::notice title=find:loot-paths::$(unzip -l client.jar | awk '{print $4}' | grep -i loot | head -25 | tr '\n' ' ' | head -c 2500)"
+          echo "::notice title=find:loot-block-ore::$(unzip -l client.jar | awk '{print $4}' | grep -iE 'loot.*ore' | head -10 | tr '\n' ' ' | head -c 1500)"
+          echo "::notice title=find:swift-sneak::$(unzip -p client.jar data/minecraft/enchantment/swift_sneak.json 2>&1 | tr -d '\n' | tr -s ' ' | head -c 2000)"
+          echo "::notice title=find:soul-speed::$(unzip -p client.jar data/minecraft/enchantment/soul_speed.json 2>&1 | tr -d '\n' | tr -s ' ' | head -c 2000)"
+          echo "::notice title=find:recipe-dirs::$(unzip -l client.jar | awk '{print $4}' | grep -E '^data/minecraft/recipe/' | head -5 | tr '\n' ' ' | head -c 1200)"
+
       - name: upload artifact
         uses: actions/upload-artifact@v7
         with:
