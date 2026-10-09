@@ -218,6 +218,63 @@ jobs:
           echo "--- done ---"
           ls -la
 
+      - name: emit vanilla signatures as annotations
+        # Job summaries and artifacts are not reachable from every environment,
+        # but check run annotations are exposed through the REST API. GitHub
+        # keeps at most 10 notice annotations per step, so the classes are
+        # announced in groups.
+        run: |
+          set +e
+          cd ci-out
+          emit() {
+            python3 - "$@" <<'PY'
+          import sys
+          for name in sys.argv[1:]:
+              print(f"::notice title=javap:{name}::{open('x.txt').read()[:0]}")
+          PY
+          }
+          for c in \
+            net.minecraft.world.level.levelgen.feature.Feature \
+            net.minecraft.world.level.levelgen.feature.ConfiguredFeature \
+            net.minecraft.world.level.levelgen.placement.PlacedFeature \
+            net.minecraft.core.registries.BuiltInRegistries ; do
+            text=$(javap -public -cp client.jar "$c" 2>&1 | tr '\n' '~' | tr -s ' ' | head -c 3000)
+            echo "::notice title=javap:$c::$text"
+          done
+          echo "::notice title=javap-fields-featuretype::$(javap -public -cp client.jar net.minecraft.core.registries.BuiltInRegistries 2>/dev/null | grep -iE 'FEATURE|PLACED|CONFIGURED' | tr '\n' '~' | head -c 3000)"
+
+      - name: emit placement signatures as annotations
+        run: |
+          set +e
+          cd ci-out
+          for c in \
+            net.minecraft.world.level.levelgen.placement.CountPlacement \
+            net.minecraft.world.level.levelgen.placement.InSquarePlacement \
+            net.minecraft.world.level.levelgen.placement.HeightRangePlacement \
+            net.minecraft.world.level.levelgen.placement.BiomeFilter \
+            net.minecraft.world.level.levelgen.HeightRange ; do
+            text=$(javap -public -cp client.jar "$c" 2>&1 | tr '\n' '~' | tr -s ' ' | head -c 3000)
+            echo "::notice title=javap:$c::$text"
+          done
+          echo "::notice title=classes:levelgen::$(grep -E '^net/minecraft/world/level/levelgen/(feature|placement)/[A-Za-z]+\.class$' client-classes.txt | tr '\n' ' ' | head -c 3000)"
+
+      - name: emit ore configuration signatures as annotations
+        run: |
+          set +e
+          cd ci-out
+          for c in \
+            net.minecraft.world.level.levelgen.feature.configurations.OreConfiguration \
+            net.minecraft.world.level.levelgen.feature.OreFeature \
+            net.minecraft.world.level.levelgen.feature.FeatureType \
+            net.minecraft.world.level.block.state.properties.BlockStateProvider \
+            net.minecraft.tags.BlockTags \
+            net.minecraft.util.valueproviders.UniformInt \
+            net.minecraft.util.valueproviders.ConstantInt ; do
+            text=$(javap -public -cp client.jar "$c" 2>&1 | grep -vE '^  public final |^  public java.lang.String|^  public int hashCode|^  public boolean equals' | tr '\n' '~' | tr -s ' ' | head -c 3000)
+            echo "::notice title=javap:$c::$text"
+          done
+          echo "::notice title=classes:worldgen::$(grep -E '^net/minecraft/(worldgen|world/level/levelgen)/' client-classes.txt | grep -vE '\$' | head -c 3000 | tr '\n' ' ')"
+
       - name: upload artifact
         uses: actions/upload-artifact@v7
         with:

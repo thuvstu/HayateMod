@@ -77,6 +77,7 @@ jobs:
       - name: report failure tail
         if: failure()
         run: |
+          set +e
           {
             echo '## Build log (tail)'
             echo
@@ -84,6 +85,28 @@ jobs:
             tail -n 120 build/ci/build-log.txt
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
+
+          # Also publish the compiler output as error annotations: at most 10 per
+          # step, ~4k characters each, which is enough for a javac error list.
+          python3 - <<'PY'
+          import pathlib, re
+          log = pathlib.Path('build/ci/build-log.txt')
+          text = log.read_text(errors='replace') if log.exists() else ''
+          lines = [line for line in text.splitlines()
+                   if re.search(r'error:|warning:|FAILED|\* What went wrong|\* Try:|Could not resolve|Execution failed', line)]
+          if not lines:
+              lines = text.splitlines()[-60:]
+          chunk, chunks = [], []
+          for line in lines:
+              chunk.append(line)
+              if sum(len(c) + 1 for c in chunk) > 3500:
+                  chunks.append(chunk); chunk = []
+          if chunk:
+              chunks.append(chunk)
+          for index, group in enumerate(chunks[:10]):
+              message = '\n'.join(group).replace('%', '%25').replace('\r', '%0D')[:4000].replace('\n', '%0A')
+              print(f"::error title=build-log[{index + 1}]::{message}")
+          PY
 
       - name: capture build artifacts
         uses: actions/upload-artifact@v7
