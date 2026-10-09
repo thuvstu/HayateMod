@@ -28,7 +28,7 @@ SCALE = 2
 LABEL = 0
 
 # Folders in the order they should appear on the sheet.
-GROUPS = ("item", "entity/equipment/humanoid", "entity/equipment/humanoid_leggings", "block")
+GROUPS = ("item", "entity", "entity/equipment/humanoid", "entity/equipment/humanoid_leggings", "block")
 EXTRA = ("assets/hayatemod/icon.png",)
 
 # sheet background, cell background, label colour

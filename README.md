@@ -53,6 +53,12 @@ IDE から開く場合は `build.gradle` を **Gradle プロジェクトとし�
 | ブロック | `hayatemod:gale_ash` | 疾風の灰（ネザーの疾風の渓谷の床を覆う。シャベルで採掘） |
 | バイオーム | `hayatemod:gale_hollow` | 疾風の渓谷（ネザーに生成。灰の円盤・疾風鉱石・固有の霧と粒子） |
 | トリム | `hayatemod:gale` | 疾風のインゴットが鍛冶台のトリム素材になる（色 `#7FE3F0`） |
+| バイオーム | `hayatemod:gale_heights` | 疾風の高み（エンドの外郭島に生成。疾風の精が湧く） |
+| アイテム | `hayatemod:gale_fan` | 疾風の扇。右クリックで前方 6 ブロックの mob を吹き飛ばす（耐久128 / クールダウン3秒） |
+| エンチャント | `hayatemod:gale_burst` | 剣に付与。攻撃時のノックバックが上がる（最大III） |
+| エンチャント | `hayatemod:gale_drop` | 靴に付与。落下ダメージを軽減する（最大III） |
+| モブ | `hayatemod:gale_spirit` | 疾風の精。浮遊する中立モブ。疾風の渓谷と疾風の高みに湧く |
+| 構造物 | `hayatemod:gale_ruins` | 疾風の遺跡（ネザーに生成。石煉瓦の柱・疾風ランプ・チェスト） |
 | エンチャント | `hayatemod:gale_step` | 靴に付与。レベルごとに移動速度 +4%（最大III） |
 | 防具 | `hayatemod:gale_helmet` / `gale_chestplate` / `gale_leggings` / `gale_boots` | 疾風の具足一式（鉄とダイヤの中間程度）。**4部位すべて装備すると移動速度上昇が持続** |
 | クリエイティブタブ | `hayatemod:hayate` | 上記をまとめた独自タブ |
@@ -63,6 +69,8 @@ IDE から開く場合は `build.gradle` を **Gradle プロジェクトとし�
 | イベント | `ServerTickEvents.END_SERVER_TICK` | 疾風の具足のフルセット判定（移動速度 + 風のパーティクル） |
 | ワールド生成 | `BiomeModifications.addFeature` | オーバーワールド全バイオームに疾風鉱石を追加 |
 | ワールド生成 | `NetherBiomes.addNetherBiome` | 疾風の渓谷をネザーのノイズ空間に登録 |
+| ワールド生成 | `TheEndBiomes.addHighlandsBiome` | 疾風の高みをエンドの外郭島に登録 |
+| ワールド生成 | `BiomeModifications.addSpawn` | 疾風の精を疾風の渓谷 / 疾風の高みに追加 |
 
 ```
 # レシピ
@@ -82,6 +90,7 @@ IDE から開く場合は `build.gradle` を **Gradle プロジェクトとし�
 疾風のインゴット x8            → 疾風の胸当て       (shaped)
 疾風のインゴット x7            → 疾風の腿当て       (shaped)
 疾風のインゴット x4            → 疾風のブーツ       (shaped)
+疾風の羽根 x4 + インゴット + 棒 → 疾風の扇          (shaped, 扇型)
 ```
 
 日本語（`ja_jp.json`）と英語（`en_us.json`）の翻訳を同梱しています。
@@ -214,12 +223,126 @@ src/main/java/.../worldgen/ModWorldgen.java            … BiomeModifications.ad
 
 `placed_feature` の ID と `ModWorldgen#GALE_ORE_PLACED` の `ResourceKey` は一致させてください。
 
+### モブの追加（26.x）
+
+`FlyingMob` は **26.3 で消えました**。飛行モブを作るには
+`PathfinderMob` を継承して次の3点を揃えます。
+
+```java
+public class GaleSpiritEntity extends PathfinderMob {
+	public GaleSpiritEntity(EntityType<? extends GaleSpiritEntity> type, Level level) {
+		super(type, level);
+		this.setNoGravity(true);                                     // 1. 浮く
+		this.moveControl = new FlyingMoveControl<GaleSpiritEntity>(this, 20, true);
+	}
+
+	@Override
+	protected PathNavigation createNavigation(Level level) {          // 2. 空飛ぶ経路探索
+		return new FlyingPathNavigation(this, level);
+	}
+}
+```
+
+3. 属性は **必ず** 登録してください（登録しないと AI が `null` を読んで落ちます）。
+
+```java
+FabricDefaultAttributeRegistry.register(GALE_SPIRIT, GaleSpiritEntity.createAttributes());
+//   net.fabricmc.fabric.api.object.builder.v1.entity.FabricDefaultAttributeRegistry
+```
+
+エンティティ型は `EntityType.Builder.of(factory, MobCategory).sized(...).build(ResourceKey)` で
+作り、`Registry.register(BuiltInRegistries.ENTITY_TYPE, key, type)` で登録します。
+`build()` に渡すのは **文字列ではなく `ResourceKey<EntityType<?>>`** です。
+
+**描画は src/client 側**（`splitEnvironmentSourceSets()` で分かれています）。
+26.x のレンダラは **エンティティではなくレンダーステート**を引数に取ります。
+
+```java
+public class GaleSpiritRenderer
+		extends MobRenderer<GaleSpiritEntity, LivingEntityRenderState, GaleSpiritModel> {
+	@Override
+	public LivingEntityRenderState createRenderState() {
+		return new LivingEntityRenderState();        // 26.x はこれが必須
+	}
+
+	@Override
+	public Identifier getTextureLocation(LivingEntityRenderState state) { ... }
+}
+
+// src/client のエントリポイントで
+EntityRendererRegistry.register(ModEntities.GALE_SPIRIT, GaleSpiritRenderer::new);
+```
+
+モデル空間は相変わらず **Y が下向き・1 単位が 1/16 ブロック・y=24 が地面** です。
+`LayerDefinition.create(mesh, 64, 32).bakeRoot()` で焼いて `EntityModel<LivingEntityRenderState>`
+に渡し、`setupAnim(state)` で `state.ageInTicks` などから動かします。
+
+### 構造物（ジグソー）の追加（26.x）
+
+構造物も「ほぼデータ」です。Java は不要で、次の4つを置くだけです。
+
+```
+data/hayatemod/worldgen/structure/gale_ruins.json        … "type": "minecraft:jigsaw"
+data/hayatemod/worldgen/template_pool/gale_ruins/start.json … ピース一覧
+data/hayatemod/worldgen/structure_set/gale_ruins.json    … 配置（間隔・salt）
+data/hayatemod/structures/gale_ruins/ruin_1.nbt          … ピースの本体（gzipped NBT）
+```
+
+バニラの書式（実 jar から確認したもの）:
+
+```jsonc
+// structure
+{ "type": "minecraft:jigsaw", "start_pool": "hayatemod:gale_ruins/start",
+  "size": 1, "max_distance_from_center": 40,
+  "start_height": { "type": "minecraft:uniform",
+                    "max_inclusive": { "below_top": 12 },
+                    "min_inclusive": { "absolute": 32 } },
+  "biomes": "#hayatemod:has_structure/gale_ruins",
+  "step": "underground_decoration", "terrain_adaptation": "beard_thin" }
+
+// template_pool（element_type は 26.3 でも legacy_ 付きが無難）
+{ "fallback": "minecraft:empty", "elements": [ { "weight": 1, "element": {
+      "element_type": "minecraft:legacy_single_pool_element",
+      "location": "hayatemod:gale_ruins/ruin_1", "projection": "rigid" } } ] }
+
+// structure_set
+{ "structures": [ { "structure": "hayatemod:gale_ruins", "weight": 1 } ],
+  "placement": { "type": "minecraft:random_spread", "salt": 74591220,
+                 "separation": 5, "spacing": 18, "spread_type": "triangular" } }
+```
+
+NBT ピースは `tools/generate_structures.py` が生成します（**標準ライブラリだけの
+gzip NBT ライター**）。構造ブロックを手で組むほど大きくない建造物なら、コードで
+書いて git に置く方が差分が読めて楽です。CI は再生成して差分が出ないことを確認
+します。
+
+ピースの中にチェストを置く場合はブロックエンティティを `blocks[].nbt` に書きます
+（`{"id": "minecraft:chest", "LootTable": "hayatemod:chests/gale_ruins"}`）。
+
 ### データ駆動エンチャント
 
 `data/hayatemod/enchantment/gale_step.json` を置くだけで反映されます（Java 側の登録は不要）。
 `supported_items` にバニラのタグ（`#minecraft:enchantable/foot_armor`）を指定し、
 `data/minecraft/tags/enchantment/in_enchanting_table.json` を**追記**することで
 エンチャントテーブルにも出るようになります（タグは `replace: true` を書かない限りマージされます）。
+
+効果（`effects`）は**キーが単数形**です。ここは 1.21 系の `conditions` / `functions`
+から変わっているので、実 jar の `data/minecraft/enchantment/knockback.json` と
+`feather_falling.json` を確認して合わせてください。
+
+```jsonc
+// ノックバック追加（minecraft:knockback）
+"effects": { "minecraft:knockback": [ { "effect": {
+    "type": "minecraft:add",
+    "value": { "type": "minecraft:linear", "base": 0.5, "per_level_above_first": 0.5 } } } ] }
+
+// 落下ダメージ軽減（minecraft:damage_protection + requirements）
+"effects": { "minecraft:damage_protection": [ {
+    "effect": { "type": "minecraft:add",
+                "value": { "type": "minecraft:linear", "base": 2.0, "per_level_above_first": 2.0 } },
+    "requirements": { "type": "minecraft:damage_source_properties",
+                      "predicate": { "tags": [ { "expected": true, "id": "#minecraft:is_fall" } ] } } } ] }
+```
 
 ## 5. 「非難読化」対応で変わったところ
 
