@@ -40,6 +40,14 @@ jobs:
       - name: make gradle wrapper executable
         run: chmod +x ./gradlew
 
+      - name: validate resources
+        run: python3 tools/validate_resources.py
+
+      - name: regenerate textures and check they are committed
+        run: |
+          python3 tools/generate_textures.py
+          git diff --exit-code -- src/main/resources/assets/hayatemod/textures src/main/resources/icon.png
+
       - name: build
         run: |
           set -o pipefail

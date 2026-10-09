@@ -1,6 +1,115 @@
 {
-	"parent": "minecraft:item/generated",
+	"parent": "minecraft:block/block",
 	"textures": {
-		"layer0": "hayatemod:item/gale_charm"
-	}
+		"gem": "hayatemod:item/gale_charm_gem",
+		"cord": "hayatemod:item/gale_charm_cord",
+		"particle": "#gem"
+	},
+	"elements": [
+		{
+			"from": [
+				7,
+				12,
+				7
+			],
+			"to": [
+				9,
+				16,
+				9
+			],
+			"faces": {
+				"down": {
+					"texture": "#cord"
+				},
+				"up": {
+					"texture": "#cord"
+				},
+				"north": {
+					"texture": "#cord"
+				},
+				"south": {
+					"texture": "#cord"
+				},
+				"west": {
+					"texture": "#cord"
+				},
+				"east": {
+					"texture": "#cord"
+				}
+			}
+		},
+		{
+			"from": [
+				7,
+				10,
+				7
+			],
+			"to": [
+				9,
+				12,
+				9
+			],
+			"faces": {
+				"down": {
+					"texture": "#cord"
+				},
+				"up": {
+					"texture": "#cord"
+				},
+				"north": {
+					"texture": "#cord"
+				},
+				"south": {
+					"texture": "#cord"
+				},
+				"west": {
+					"texture": "#cord"
+				},
+				"east": {
+					"texture": "#cord"
+				}
+			}
+		},
+		{
+			"from": [
+				4,
+				3,
+				4
+			],
+			"to": [
+				12,
+				11,
+				12
+			],
+			"faces": {
+				"down": {
+					"texture": "#gem"
+				},
+				"up": {
+					"texture": "#gem"
+				},
+				"north": {
+					"texture": "#gem"
+				},
+				"south": {
+					"texture": "#gem"
+				},
+				"west": {
+					"texture": "#gem"
+				},
+				"east": {
+					"texture": "#gem"
+				}
+			},
+			"rotation": {
+				"origin": [
+					8,
+					8,
+					8
+				],
+				"axis": "y",
+				"angle": 45
+			}
+		}
+	]
 }

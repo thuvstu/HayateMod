@@ -1,6 +1,81 @@
 {
-	"parent": "minecraft:block/cube_all",
+	"parent": "minecraft:block/block",
 	"textures": {
-		"all": "hayatemod:block/gale_lamp_on"
-	}
+		"frame": "hayatemod:block/gale_lamp_frame",
+		"core": "hayatemod:block/gale_lamp_core_on",
+		"particle": "#frame"
+	},
+	"elements": [
+		{
+			"from": [
+				0,
+				0,
+				0
+			],
+			"to": [
+				16,
+				16,
+				16
+			],
+			"faces": {
+				"down": {
+					"texture": "#frame",
+					"cullface": "down"
+				},
+				"up": {
+					"texture": "#frame",
+					"cullface": "up"
+				},
+				"north": {
+					"texture": "#frame",
+					"cullface": "north"
+				},
+				"south": {
+					"texture": "#frame",
+					"cullface": "south"
+				},
+				"west": {
+					"texture": "#frame",
+					"cullface": "west"
+				},
+				"east": {
+					"texture": "#frame",
+					"cullface": "east"
+				}
+			}
+		},
+		{
+			"from": [
+				4,
+				4,
+				4
+			],
+			"to": [
+				12,
+				12,
+				12
+			],
+			"faces": {
+				"down": {
+					"texture": "#core"
+				},
+				"up": {
+					"texture": "#core"
+				},
+				"north": {
+					"texture": "#core"
+				},
+				"south": {
+					"texture": "#core"
+				},
+				"west": {
+					"texture": "#core"
+				},
+				"east": {
+					"texture": "#core"
+				}
+			},
+			"light_emission": 15
+		}
+	]
 }
