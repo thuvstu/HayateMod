@@ -300,6 +300,25 @@ jobs:
             echo "::notice title=javap:$c::$text"
           done
 
+      - name: inspect the vanilla data pack (worldgen layout)
+        run: |
+          set +e
+          cd ci-out
+          echo "::notice title=datapack:worldgen-dirs::$(unzip -l client.jar | awk '{print $4}' | grep -E '^data/minecraft/worldgen/' | awk -F/ '{print $1"/"$2"/"$3"/"$4}' | sort -u | tr '\n' ' ' | head -c 2500)"
+          echo "::notice title=datapack:ore-files::$(unzip -l client.jar | awk '{print $4}' | grep -E '^data/minecraft/worldgen/(feature|placed_feature)/ore_' | tr '\n' ' ' | head -c 2500)"
+          echo "::notice title=datapack:ore-coal-feature::$(unzip -p client.jar data/minecraft/worldgen/feature/ore_coal.json 2>&1 | tr -d '\n' | tr -s ' ' | head -c 2500)"
+          echo "::notice title=datapack:ore-coal-placed::$(unzip -p client.jar data/minecraft/worldgen/placed_feature/ore_coal.json 2>&1 | tr -d '\n' | tr -s ' ' | head -c 2500)"
+          echo "::notice title=datapack:ore-nether-gold::$(unzip -p client.jar data/minecraft/worldgen/feature/ore_nether_gold.json 2>&1 | tr -d '\n' | tr -s ' ' | head -c 1500)"
+
+      - name: inspect the vanilla data pack (enchantments, tags)
+        run: |
+          set +e
+          cd ci-out
+          echo "::notice title=datapack:enchantment-dirs::$(unzip -l client.jar | awk '{print $4}' | grep -E '^data/minecraft/(enchantment|tags/enchantment)/' | head -40 | tr '\n' ' ' | head -c 2500)"
+          echo "::notice title=datapack:enchantment-sharpness::$(unzip -p client.jar data/minecraft/enchantment/sharpness.json 2>&1 | tr -d '\n' | tr -s ' ' | head -c 2500)"
+          echo "::notice title=datapack:enchantment-effects::$(unzip -l client.jar | awk '{print $4}' | grep -E '^data/minecraft/enchantment_effect/' | head -20 | tr '\n' ' ' | head -c 1500)"
+          echo "::notice title=datapack:tags-dir::$(unzip -l client.jar | awk '{print $4}' | grep -E '^data/minecraft/tags/' | awk -F/ '{print $4}' | sort -u | tr '\n' ' ' | head -c 1500)"
+
       - name: upload artifact
         uses: actions/upload-artifact@v7
         with:
