@@ -1,0 +1,4 @@
+net/minecraft/bundler/Main$FileEntry.class
+net/minecraft/bundler/Main$ResourceParser.class
+net/minecraft/bundler/Main$Thrower.class
+net/minecraft/bundler/Main.class
