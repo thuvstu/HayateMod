@@ -218,26 +218,16 @@ jobs:
           echo "--- done ---"
           ls -la
 
-      - name: emit item and equipment api as annotations
+      - name: emit tool and component api as annotations
         run: |
           set +e
           cd ci-out
-          for C in \
-            net.minecraft.world.item.SwordItem \
-            net.minecraft.world.item.Tier \
-            net.minecraft.world.item.ToolMaterial \
-            net.minecraft.world.item.equipment.ArmorMaterial \
-            net.minecraft.world.item.equipment.EquipmentAssets \
-            net.minecraft.world.item.component.Equippable \
-            net.minecraft.world.item.component.Fuel \
-            net.minecraft.world.item.component.UseCooldown ; do
-            OUT=$(javap -cp client.jar "$C" 2>&1 | tr '\n' '~' | tr -s ' ' | head -c 2000)
-            echo "::notice title=javap:$C::$OUT"
-          done
-          echo "::notice title=classes:equipment::$(unzip -l client.jar | awk '{print $4}' | grep -E '^net/minecraft/world/item/equipment/' | tr '\n' ' ' | head -c 2200)"
-          echo "::notice title=classes:components::$(unzip -l client.jar | awk '{print $4}' | grep -E '^net/minecraft/world/item/component/(Fuel|Use|Tool|Weapon|Equippable|Damage)' | tr '\n' ' ' | head -c 2200)"
-          echo "::notice title=data:equipment::$(unzip -l client.jar | awk '{print $4}' | grep -E '^data/minecraft/equipment/' | head -10 | tr '\n' ' ' | head -c 1200)"
-          echo "::notice title=data:enchantable::$(unzip -p client.jar data/minecraft/tags/item/enchantable/melee_weapon.json 2>&1 | tr -d '\n' | tr -s ' ' | head -c 1200)"
+          echo "::notice title=javap:Weapon::$(javap -cp client.jar net.minecraft.world.item.component.Weapon 2>&1 | tr '\n' '~' | tr -s ' ' | head -c 1400)"
+          echo "::notice title=javap:Tool::$(javap -cp client.jar net.minecraft.world.item.component.Tool 2>&1 | tr '\n' '~' | tr -s ' ' | head -c 1800)"
+          echo "::notice title=tags:incorrect::$(javap -cp client.jar net.minecraft.tags.BlockTags 2>&1 | grep -oE 'INCORRECT_FOR_[A-Z_]+' | sort -u | tr '\n' ' ' | head -c 1200)"
+          echo "::notice title=tags:item::$(javap -cp client.jar net.minecraft.tags.ItemTags 2>&1 | grep -oE '(DIAMOND|IRON|GOLD|NETHERITE|COPPER)_[A-Z_]+|REPAIR[A-Z_]*' | sort -u | tr '\n' ' ' | head -c 1500)"
+          echo "::notice title=components:names::$(javap -cp client.jar net.minecraft.core.component.DataComponents 2>&1 | grep -oE ' (WEAPON|TOOL|USE_COOLDOWN|CONSUMABLE|MAX_DAMAGE|DAMAGE|EQUIPPABLE|FOOD|USE_REMAINDER|GLIDER|DAMAGE_RESISTANT);' | sort -u | tr '\n' ' ' | head -c 800)"
+          echo "::notice title=classes:fuel::$(unzip -l client.jar | awk '{print $4}' | grep -iE 'fuel' | head -8 | tr '\n' ' ' | head -c 800)"
 
       - name: upload artifact
         uses: actions/upload-artifact@v7

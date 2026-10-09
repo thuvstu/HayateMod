@@ -313,6 +313,148 @@ def charm_cord() -> Canvas:
 	return c
 
 
+def gale_feather() -> Canvas:
+	"""A wind tinted feather: curved spine with barbs on both sides."""
+	c = Canvas(16)
+	# spine, slightly curved
+	for step in range(13):
+		t = step / 12
+		x = int(round(3 + 9 * t))
+		y = int(round(13 - 10 * t + 1.6 * math.sin(t * math.pi)))
+		c.set(x, y, PALE)
+		c.set(x, y - 1, SHINE)
+	# barbs, perpendicular to the spine
+	for step in range(3, 13):
+		t = step / 12
+		x = int(round(3 + 9 * t))
+		y = int(round(13 - 10 * t + 1.6 * math.sin(t * math.pi)))
+		length = int(round(1 + 3 * math.sin(t * math.pi)))
+		for offset in range(1, length + 1):
+			c.set(x - offset, y - offset // 2, MID)
+			c.set(x + offset, y + offset // 2 + 1, PALE if offset % 2 else MID)
+	# glowing tip
+	c.set(11, 3, SHINE)
+	c.set(12, 2, PALE)
+	c.set(12, 3, MID)
+	c.outline(DEEP)
+	return c
+
+
+def gale_orb() -> Canvas:
+	"""A sphere of compressed wind with a specular highlight."""
+	c = Canvas(16)
+	c.circle(8, 8, 5.4, MID)
+	for y in range(16):
+		for x in range(16):
+			if not c.opaque(x, y):
+				continue
+			d = math.hypot(x - 5.8, y - 5.8) / 8.0
+			c.set(x, y, mix(SHINE, DEEP, min(1.0, 0.15 + d * 1.1)))
+	c.circle(6.4, 6.4, 1.6, SHINE)
+	c.set(5, 5, rgb("FFFFFF"))
+	# a rim of swirling wind
+	for deg in range(0, 360, 30):
+		rad = math.radians(deg)
+		px = int(round(8 + 6.6 * math.cos(rad)))
+		py = int(round(8 + 6.6 * math.sin(rad)))
+		c.set(px, py, PALE)
+	c.outline(DEEP)
+	return c
+
+
+def gale_blade() -> Canvas:
+	"""A tapered gale blade with a gold guard and a wrapped handle."""
+	c = Canvas(16)
+	# the blade as a tapered quad: centre line (4, 12) -> (12, 4),
+	# width measured along the perpendicular (1, 1)
+	def inside(point, polygon) -> bool:
+		x, y = point
+		hits = 0
+		for index, (x0, y0) in enumerate(polygon):
+			x1, y1 = polygon[(index + 1) % len(polygon)]
+			if (y0 > y) != (y1 > y) and x < x0 + (y - y0) / (y1 - y0) * (x1 - x0):
+				hits += 1
+		return hits % 2 == 1
+
+	polygon = [(2.45, 10.45), (11.43, 3.43), (12.57, 4.57), (5.55, 13.55)]
+	spine = (2.45 + 10.45 + 5.55 + 13.55) / 2  # (x + y) of the blade centre line
+	for y in range(16):
+		for x in range(16):
+			if not inside((x + 0.5, y + 0.5), polygon):
+				continue
+			# distance from the blade centre, negative on the cutting edge
+			offset = (x + 0.5 + y + 0.5) - spine
+			if offset < -0.8:
+				c.set(x, y, SHINE)
+			elif offset > 1.4:
+				c.set(x, y, METAL_DARK)
+			else:
+				c.set(x, y, METAL_LIGHT)
+	# wind tinted edge
+	for x, y in ((10, 2), (11, 2), (9, 3), (12, 1)):
+		c.set(x, y, PALE)
+	# guard, drawn across the blade
+	for k in range(-3, 4):
+		c.set(int(round(4 + k * 0.71)), int(round(12 + k * 0.71)), GOLD)
+		c.set(int(round(4 + k * 0.71)) + 1, int(round(12 + k * 0.71)) + 1, GOLD_DARK)
+	# handle continuing past the guard
+	for step in range(1, 4):
+		x, y = 4 - step, 12 + step
+		c.set(x, y, LEATHER)
+		c.set(x + 1, y, LEATHER_DARK)
+	c.set(2, 14, LEATHER)
+	c.set(1, 15, GOLD)
+	c.outline(METAL_EDGE)
+	return c
+
+
+def gale_staff() -> Canvas:
+	"""A staff: leather wrapped shaft holding a gale gem."""
+	c = Canvas(16)
+	# shaft
+	c.rect(7, 5, 8, 15, LEATHER)
+	c.vline(7, 5, 15, LEATHER_DARK)
+	c.vline(8, 5, 15, LEATHER)
+	for y in range(7, 15, 3):
+		c.rect(6, y, 9, y, GOLD_DARK)
+	# prongs holding the gem
+	for x, y in ((6, 5), (9, 5), (6, 4), (9, 4)):
+		c.set(x, y, GOLD_DARK)
+	# gem: a diamond shape
+	for y in range(1, 6):
+		for x in range(4, 12):
+			if abs(x - 7.5) + abs(y - 3) <= 3:
+				t = (x - 4) / 8 + (y - 1) / 5
+				c.set(x, y, mix(CRYSTAL, DEEP, min(1.0, t * 0.55)))
+	c.set(6, 2, SHINE)
+	c.set(6, 3, SHINE)
+	c.outline(METAL_EDGE)
+	return c
+
+
+def greater_gale_charm() -> Canvas:
+	"""An upgraded charm: a heavy ring with a bigger gem and two wind wings."""
+	c = Canvas(16)
+	c.ring(8, 8, 6.2, 1.6, GOLD_DARK)
+	c.ring(8, 8, 5.6, 1.0, GOLD)
+	c.circle(8, 8, 3.2, DEEP)
+	for y in range(16):
+		for x in range(16):
+			if c.get(x, y) == DEEP and math.hypot(x - 8, y - 8) <= 3.2:
+				t = math.hypot(x - 6.5, y - 6.5) / 6
+				c.set(x, y, mix(CRYSTAL, DEEP, min(1.0, t)))
+	c.set(7, 6, SHINE)
+	c.set(6, 7, SHINE)
+	# wings: two short strokes either side of the ring
+	for offset in range(1, 4):
+		c.set(1 + offset, 8 - offset, PALE)
+		c.set(14 - offset, 8 - offset, PALE)
+	c.set(2, 6, SHINE)
+	c.set(13, 6, SHINE)
+	c.outline(rgb("5A4218"))
+	return c
+
+
 # ---------------------------------------------------------------------- blocks
 
 
@@ -475,6 +617,11 @@ def targets():
 		ASSETS / "textures" / "item" / "storm_fruit.png": storm_fruit(),
 		ASSETS / "textures" / "item" / "gale_charm_gem.png": charm_gem(),
 		ASSETS / "textures" / "item" / "gale_charm_cord.png": charm_cord(),
+		ASSETS / "textures" / "item" / "gale_feather.png": gale_feather(),
+		ASSETS / "textures" / "item" / "gale_orb.png": gale_orb(),
+		ASSETS / "textures" / "item" / "gale_blade.png": gale_blade(),
+		ASSETS / "textures" / "item" / "gale_staff.png": gale_staff(),
+		ASSETS / "textures" / "item" / "greater_gale_charm.png": greater_gale_charm(),
 		ASSETS / "textures" / "block" / "gale_block.png": gale_block(),
 		ASSETS / "textures" / "block" / "gale_lamp_frame.png": lamp_frame(),
 		ASSETS / "textures" / "block" / "gale_lamp_core_off.png": lamp_core(False),
