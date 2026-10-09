@@ -238,16 +238,16 @@ jobs:
           echo "::notice title=javap:AttributeBuilder::$(javap -cp client.jar 'net.minecraft.world.item.component.ItemAttributeModifiers$Builder' 2>&1 | tr '\n' '~' | tr -s ' ' | head -c 1200)"
           echo "::notice title=javap:AttributeModifier::$(javap -cp client.jar net.minecraft.world.entity.ai.attributes.AttributeModifier 2>&1 | grep -E 'public' | head -10 | tr '\n' '~' | tr -s ' ' | head -c 1000)"
 
-      - name: emit trim, biome and disk feature data as annotations
+      - name: emit the trim registry, properties and biome api signatures
         run: |
           set +e
           cd ci-out
-          echo "::notice title=javap:TrimMaterial::$(javap -cp client.jar net.minecraft.world.item.equipment.trim.TrimMaterial 2>&1 | tr '\n' '~' | tr -s ' ' | head -c 1500)"
-          echo "::notice title=files:trim-textures::$(unzip -l client.jar | awk '{print $4}' | grep -iE 'trim' | grep -E '\.png$' | head -14 | tr '\n' ' ' | head -c 1300)"
-          echo "::notice title=javap:TargetPoint::$(javap -cp client.jar 'net.minecraft.world.level.biome.Climate$TargetPoint' 2>&1 | tr '\n' '~' | tr -s ' ' | head -c 1300)"
-          echo "::notice title=json:biome-void::$(unzip -p client.jar data/minecraft/worldgen/biome/the_void.json 2>&1 | tr -d '\n' | tr -s ' ' | head -c 1400)"
-          echo "::notice title=json:feature-disk::$(unzip -p client.jar data/minecraft/worldgen/feature/disk_gravel.json 2>&1 | tr -d '\n' | tr -s ' ' | head -c 900)"
-          echo "::notice title=json:placed-disk::$(unzip -p client.jar data/minecraft/worldgen/placed_feature/disk_gravel.json 2>&1 | tr -d '\n' | tr -s ' ' | head -c 900)"
+          echo "::notice title=registries:trim::$(javap -cp client.jar net.minecraft.core.registries.Registries 2>&1 | grep -iE 'trim' | tr '\n' '~' | tr -s ' ' | head -c 900)"
+          echo "::notice title=builtin:trim::$(javap -cp client.jar net.minecraft.core.registries.BuiltInRegistries 2>&1 | grep -iE 'trim' | tr '\n' '~' | tr -s ' ' | head -c 900)"
+          echo "::notice title=properties:trim::$(javap -cp client.jar 'net.minecraft.world.item.Item$Properties' 2>&1 | grep -iE 'trim' | tr '\n' '~' | tr -s ' ' | head -c 900)"
+          echo "::notice title=javap:TrimMaterial-static::$(javap -cp client.jar net.minecraft.world.item.equipment.trim.TrimMaterial 2>&1 | grep -E 'static|record|TrimMaterial\(' | tr '\n' '~' | tr -s ' ' | head -c 1200)"
+          echo "::notice title=javap:NetherBiomes::$(javap -cp fabric-api.jar:client.jar net.fabricmc.fabric.api.biome.v1.NetherBiomes 2>&1 | tr '\n' '~' | tr -s ' ' | head -c 1200)"
+          echo "::notice title=javap:Climate-params::$(javap -cp client.jar net.minecraft.world.level.biome.Climate 2>&1 | grep -iE 'parameters|ParameterPoint' | tr '\n' '~' | tr -s ' ' | head -c 1200)"
 
       - name: upload artifact
         uses: actions/upload-artifact@v7
