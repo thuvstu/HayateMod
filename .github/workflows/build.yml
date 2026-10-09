@@ -48,6 +48,17 @@ jobs:
           python3 tools/generate_textures.py
           git diff --exit-code -- src/main/resources/assets/hayatemod/textures src/main/resources/icon.png
 
+      - name: regenerate structures and check they are committed
+        run: |
+          python3 tools/generate_structures.py
+          git diff --exit-code -- src/main/resources/data/hayatemod/structures
+
+      - name: compile the client source set
+        # `build` is all the mod needs to ship, but the client source set is easy to
+        # forget: compile it explicitly so a broken renderer fails here instead of
+        # in someone's world.
+        run: ./gradlew compileClientJava --console=plain
+
       - name: build
         run: |
           set -o pipefail
