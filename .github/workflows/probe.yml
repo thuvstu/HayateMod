@@ -265,7 +265,8 @@ jobs:
         run: |
           set +e
           cd ci-out
-          echo "::notice title=layout:data-dirs::$(unzip -l client.jar | awk '{print $4}' | grep -E '^data/minecraft/' | awk -F/ '{print $3}' | sort -u | tr '\n' ' ' | head -c 2000)
+          DIRS=$(unzip -l client.jar | awk '{print $4}' | grep -E '^data/minecraft/' | awk -F/ '{print $3}' | sort -u | tr '\n' ' ' | head -c 2000)
+          echo "::notice title=layout:data-dirs::$DIRS"
 
       - name: upload artifact
         uses: actions/upload-artifact@v7
