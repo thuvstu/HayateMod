@@ -218,35 +218,22 @@ jobs:
           echo "--- done ---"
           ls -la
 
-      - name: emit entity registration signatures
+      - name: emit flying mob and loot table signatures
         run: |
           set +e
           cd ci-out
           CP="client.jar"
           one () { tr '\n' '~' | tr -s ' ' | head -c "$1"; }
-          echo "::notice title=javap:EntityRenderer::$(javap -cp $CP net.minecraft.client.renderer.entity.EntityRenderer 2>&1 | grep -E 'public|protected' | one 1600)"
-          echo "::notice title=classes:spawn::$(grep -E '^net/minecraft/world/entity/Spawn[A-Za-z]*\.class$' client-classes.txt | tr '\n' ' ' | one 500) FLY=$(grep -iE 'flying' client-classes.txt | tr '\n' ' ' | one 600)"
-          echo "::notice title=javap:SpawnPlacements::$(javap -cp $CP net.minecraft.world.entity.SpawnPlacements 2>&1 | grep -E 'public' | one 1000)"
-          echo "::notice title=javap:PathfinderMob::$(javap -cp $CP net.minecraft.world.entity.PathfinderMob 2>&1 | grep -E 'public|protected' | one 1400)"
-          echo "::notice title=javap:Mob-static::$(javap -cp $CP net.minecraft.world.entity.Mob 2>&1 | grep -E 'static|goalSelector|targetSelector|registerGoals|getNavigation' | one 1400)"
-          echo "::notice title=javap:LayerDefinition::$(javap -cp $CP net.minecraft.client.model.geom.LayerDefinition 2>&1 | one 900)"
-          echo "::notice title=javap:EntityType-builder2::$(javap -cp $CP 'net.minecraft.world.entity.EntityType$Builder' 2>&1 | grep -E 'clientTrackingRange|updateInterval|build|fireImmune|canSpawnFarFromPlayer|mob|sized' | one 1200)"
-          echo "::notice title=javap:EntityFactory::$(javap -cp $CP 'net.minecraft.world.entity.EntityType$EntityFactory' 2>&1 | one 700)"
-          echo "::notice title=javap:AttributeSupplier::$(javap -cp $CP 'net.minecraft.world.entity.ai.attributes.AttributeSupplier$Builder' 2>&1 | grep -E 'public' | one 800)"
-
-      - name: emit model and goal signatures
-        run: |
-          set +e
-          cd ci-out
-          CP="client.jar"
-          one () { tr '\n' '~' | tr -s ' ' | head -c "$1"; }
-          echo "::notice title=javap:EntityModel::$(javap -cp $CP net.minecraft.client.model.EntityModel 2>&1 | one 1200)"
-          echo "::notice title=javap:goals::FLOAT=$(javap -cp $CP net.minecraft.world.entity.ai.goal.FloatGoal 2>&1 | grep -E 'public' | one 500) STROLL=$(javap -cp $CP net.minecraft.world.entity.ai.goal.RandomStrollGoal 2>&1 | grep -E 'public' | one 700) LOOKP=$(javap -cp $CP net.minecraft.world.entity.ai.goal.LookAtPlayerGoal 2>&1 | grep -E 'public' | one 700) LOOK=$(javap -cp $CP net.minecraft.world.entity.ai.goal.RandomLookAroundGoal 2>&1 | grep -E 'public' | one 500)"
-          echo "::notice title=javap:PathNavigation::$(javap -cp $CP net.minecraft.world.entity.ai.navigation.PathNavigation 2>&1 | grep -E 'public' | one 900) FLYING=$(javap -cp $CP net.minecraft.world.entity.ai.navigation.FlyingPathNavigation 2>&1 | grep -E 'public' | one 700)"
-          echo "::notice title=javap:SpawnEggItem::$(javap -cp $CP net.minecraft.world.item.SpawnEggItem 2>&1 | grep -E 'public' | one 900)"
-          echo "::notice title=javap:MobCreateNavigation::$(javap -cp $CP net.minecraft.world.entity.Mob 2>&1 | grep -iE 'navigation|MoveControl|create' | one 1000)"
-          echo "::notice title=javap:LivingEntity-static::$(javap -cp $CP net.minecraft.world.entity.LivingEntity 2>&1 | grep -iE 'createLivingAttributes|getAttribute|setNoGravity|isNoGravity' | one 900)"
-          echo "::notice title=javap:Entity-noGravity::$(javap -cp $CP net.minecraft.world.entity.Entity 2>&1 | grep -iE 'setNoGravity|isNoGravity|setDeltaMovement|resetFallDistance|getEntities' | one 900)"
+          echo "::notice title=javap:FlyingMoveControl::$(javap -cp $CP net.minecraft.world.entity.ai.control.FlyingMoveControl 2>&1 | one 900)"
+          echo "::notice title=javap:createRenderState::$(javap -cp $CP net.minecraft.client.renderer.entity.EntityRenderer 2>&1 | grep -iE 'createRenderState|extractRenderState' | one 900)"
+          echo "::notice title=javap:LayerDefinition2::$(javap -cp $CP net.minecraft.client.model.geom.builders.LayerDefinition 2>&1 | one 900)"
+          echo "::notice title=json:loot-chest::$(unzip -p client.jar data/minecraft/loot_table/chests/simple_dungeon.json 2>&1 | tr -d '\n' | tr -s ' ' | one 1400)"
+          echo "::notice title=json:loot-block-stone::$(unzip -p client.jar data/minecraft/loot_table/blocks/stone.json 2>&1 | tr -d '\n' | tr -s ' ' | one 1400)"
+          echo "::notice title=json:pool-trailruins::$(unzip -p client.jar data/minecraft/worldgen/template_pool/trail_ruins/tower/tower_bottom.json 2>&1 | tr -d '\n' | tr -s ' ' | one 1200)"
+          echo "::notice title=files:pool-elements::$(grep -rhoE 'element_type": *"[a-z_]+"' client.jar 2>/dev/null | sort -u | tr '\n' ' ' | one 600) GREP=$(unzip -p client.jar data/minecraft/worldgen/template_pool/ancient_city/structures/unknown_excavation.json 2>&1 | tr -d '\n' | tr -s ' ' | one 700)"
+          echo "::notice title=javap:BuiltInRegistries-entity::$(javap -cp $CP net.minecraft.core.registries.BuiltInRegistries 2>&1 | grep -iE 'ENTITY_TYPE|public static final net.minecraft.core.Registry' | one 1200)"
+          echo "::notice title=javap:Registry-register::$(javap -cp $CP net.minecraft.core.Registry 2>&1 | grep -E 'public static.*register' | one 1000)"
+          echo "::notice title=javap:HierarchicalModel::$(javap -cp $CP net.minecraft.client.model.HierarchicalModel 2>&1 | one 900)"
 
       - name: upload artifact
         uses: actions/upload-artifact@v7
