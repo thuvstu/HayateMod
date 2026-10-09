@@ -224,21 +224,3 @@ jobs:
           name: probe-output
           path: ci-out/
           if-no-files-found: warn
-
-      - name: publish results to the branch
-        run: |
-          set +e
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          rm -f ci-out/*.jar
-          git add -f ci-out
-          if git diff --cached --quiet; then
-            echo "nothing to publish"
-            exit 0
-          fi
-          git commit -m "ci: probe results [skip ci]"
-          for i in 1 2 3; do
-            git pull --rebase -X theirs origin "${GITHUB_REF_NAME}" && git push origin "HEAD:${GITHUB_REF_NAME}" && break
-            echo "push attempt $i failed, retrying"
-            sleep 5
-          done
