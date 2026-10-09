@@ -7,11 +7,15 @@ name: build
 # GitHub Actions log endpoint.
 on:
   push:
+    # `branches` is required as well: a workflow that only filters on `tags`
+    # does not run for branch pushes at all.
+    branches:
+      - '**'
+    tags:
+      - 'v*'
     paths-ignore:
       - 'ci-out/**'
       - '**/*.md'
-    tags:
-      - 'v*'
   pull_request:
 
 permissions:
