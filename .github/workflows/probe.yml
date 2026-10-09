@@ -249,9 +249,8 @@ jobs:
           set +e
           cd ci-out
           for F in \
-            data/minecraft/recipe/iron_ingot_from_smelting.json \
-            data/minecraft/recipe/crafting_table.json \
-            data/minecraft/recipe/bread.json \
+            data/minecraft/recipe/iron_ingot.json \
+            data/minecraft/recipe/iron_ingot_from_blasting.json \
             data/minecraft/tags/block/mineable/pickaxe.json ; do
             OUT=$(unzip -p client.jar "$F" 2>&1 | tr -d '\n' | tr -s ' ' | head -c 2400)
             echo "::notice title=data:$F::$OUT"
