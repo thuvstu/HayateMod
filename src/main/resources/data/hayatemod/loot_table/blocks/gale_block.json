@@ -1,17 +1,16 @@
 {
 	"type": "minecraft:block",
+	"random_sequence": "hayatemod:blocks/gale_block",
 	"pools": [
 		{
 			"rolls": 1,
 			"entries": [
 				{
 					"type": "minecraft:item",
+					"condition": {
+						"type": "minecraft:survives_explosion"
+					},
 					"name": "hayatemod:gale_block"
-				}
-			],
-			"conditions": [
-				{
-					"condition": "minecraft:survives_explosion"
 				}
 			]
 		}

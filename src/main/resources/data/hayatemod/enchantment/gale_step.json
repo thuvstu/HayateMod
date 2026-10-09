@@ -8,12 +8,12 @@
 			{
 				"amount": {
 					"type": "minecraft:linear",
-					"base": 0.04,
-					"per_level_above_first": 0.04
+					"base": 0.03,
+					"per_level_above_first": 0.02
 				},
 				"attribute": "minecraft:movement_speed",
 				"id": "hayatemod:enchantment.gale_step",
-				"operation": "add_multiplied_total"
+				"operation": "add_value"
 			}
 		]
 	},

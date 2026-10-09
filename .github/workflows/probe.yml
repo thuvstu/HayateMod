@@ -249,12 +249,19 @@ jobs:
           set +e
           cd ci-out
           for F in \
-            data/minecraft/loot_table/blocks/redstone_ore.json \
-            data/minecraft/loot_table/blocks/stone.json \
-            data/minecraft/loot_table/blocks/deepslate_coal_ore.json ; do
+            data/minecraft/recipe/iron_ingot_from_smelting.json \
+            data/minecraft/recipe/crafting_table.json \
+            data/minecraft/recipe/bread.json \
+            data/minecraft/tags/block/mineable/pickaxe.json ; do
             OUT=$(unzip -p client.jar "$F" 2>&1 | tr -d '\n' | tr -s ' ' | head -c 2400)
             echo "::notice title=data:$F::$OUT"
           done
+
+      - name: list the vanilla data layout
+        run: |
+          set +e
+          cd ci-out
+          echo "::notice title=layout:data-dirs::$(unzip -l client.jar | awk '{print $4}' | grep -E '^data/minecraft/' | awk -F/ '{print $3}' | sort -u | tr '\n' ' ' | head -c 2000)
 
       - name: upload artifact
         uses: actions/upload-artifact@v7
