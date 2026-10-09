@@ -42,11 +42,15 @@ IDE から開く場合は `build.gradle` を **Gradle プロジェクトとし�
 | アイテム | `hayatemod:gale_charm` | 右クリックで移動速度上昇II（30秒）。使い切りの消費アイテム |
 | ブロック | `hayatemod:gale_block` | 金属系の建築ブロック（ツルハシ必須） |
 | ブロック | `hayatemod:gale_lamp` | 右クリックで点灯/消灯するランプ（ブロックステート `lit`） |
+| ブロック | `hayatemod:gale_ore` | オーバーワールドに生成される鉱石（Y=-48〜88、台形分布） |
+| ブロック | `hayatemod:deepslate_gale_ore` | 深層岩バリアント |
+| エンチャント | `hayatemod:gale_step` | 靴に付与。レベルごとに移動速度 +4%（最大III） |
 | クリエイティブタブ | `hayatemod:hayate` | 上記をまとめた独自タブ |
 | コマンド | `/hayate about` | バージョン表示 |
 | コマンド | `/hayate boost [対象] [秒数] [レベル]` | 移動速度上昇を付与（権限レベル2） |
 | イベント | `LootTableEvents.MODIFY` | 石炭鉱石のドロップに疾風の粉を追加 |
 | イベント | `ServerLifecycleEvents.SERVER_STARTED` | 起動時ログ（テンプレート） |
+| ワールド生成 | `BiomeModifications.addFeature` | オーバーワールド全バイオームに疾風鉱石を追加 |
 
 ```
 # レシピ
@@ -69,7 +73,11 @@ src/main/resources/
   fabric.mod.json                 モッド定義（エントリポイント・依存関係）
   assets/hayatemod/               lang / models / blockstates / items / textures
   data/hayatemod/recipe/          レシピ JSON
-  data/hayatemod/loot_tables/     ブロックのドロップ定義
+  data/hayatemod/loot_table/      ブロックのドロップ定義（26.x は単数形）
+  data/hayatemod/worldgen/
+    feature/gale_ore.json         何を置くか（ore feature）
+    placed_feature/gale_ore.json  どこに置くか（個数・高さ範囲）
+  data/hayatemod/enchantment/     エンチャント定義（データ駆動）
 tools/generate_textures.py        テクスチャ生成スクリプト（標準ライブラリのみ）
 ```
 
@@ -78,6 +86,28 @@ tools/generate_textures.py        テクスチャ生成スクリプト（標準�
 ```bash
 python3 tools/generate_textures.py
 ```
+
+### ワールド生成の3点セット
+
+26.x のワールド生成は**完全にデータ駆動**です。`ConfiguredFeature` / `OreConfiguration` /
+`BuiltInRegistries.CONFIGURED_FEATURE` は 26.3 で消え、`Feature` インターフェースと
+`BuiltInRegistries.FEATURE_TYPE` に置き換わりました。Java 側でやることは「どのバイオームに
+置くか」の指定だけです。
+
+```
+data/hayatemod/worldgen/feature/gale_ore.json          … "type": "minecraft:ore"（config ラッパー不要）
+data/hayatemod/worldgen/placed_feature/gale_ore.json   … "feature" + "placement"
+src/main/java/.../worldgen/ModWorldgen.java            … BiomeModifications.addFeature(...)
+```
+
+`placed_feature` の ID と `ModWorldgen#GALE_ORE_PLACED` の `ResourceKey` は一致させてください。
+
+### データ駆動エンチャント
+
+`data/hayatemod/enchantment/gale_step.json` を置くだけで反映されます（Java 側の登録は不要）。
+`supported_items` にバニラのタグ（`#minecraft:enchantable/foot_armor`）を指定し、
+`data/minecraft/tags/enchantment/in_enchanting_table.json` を**追記**することで
+エンチャントテーブルにも出るようになります（タグは `replace: true` を書かない限りマージされます）。
 
 ## 5. 「非難読化」対応で変わったところ
 
@@ -88,6 +118,9 @@ python3 tools/generate_textures.py
 | `modImplementation` / `modCompileOnly` | `implementation` / `compileOnly` |
 | `remapJar` タスクが成果物 | 通常の `jar` タスクが成果物 |
 | Java 21 | Java 25 |
+| `data/<ns>/loot_tables/...` | `data/<ns>/loot_table/...` |
+| `worldgen/configured_feature` | `worldgen/feature`（`config` ラッパーが消滅） |
+| `ConfiguredFeature` / `OreConfiguration` | `Feature`（インターフェース）/ `BlockReplacement` |
 
 コード側も、26.2 でブロック＋アイテムの ID が `net.minecraft.references.BlockItemId` に
 統合されたり、クリエイティブタブの `displayItems(...)` が

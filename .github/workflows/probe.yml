@@ -249,9 +249,9 @@ jobs:
           set +e
           cd ci-out
           for F in \
-            data/minecraft/enchantment/swift_sneak.json \
-            data/minecraft/enchantment/soul_speed.json \
-            data/minecraft/tags/item/enchantable/foot_armor.json ; do
+            data/minecraft/loot_table/blocks/redstone_ore.json \
+            data/minecraft/loot_table/blocks/stone.json \
+            data/minecraft/loot_table/blocks/deepslate_coal_ore.json ; do
             OUT=$(unzip -p client.jar "$F" 2>&1 | tr -d '\n' | tr -s ' ' | head -c 2400)
             echo "::notice title=data:$F::$OUT"
           done
