@@ -17,10 +17,12 @@ public final class CraftOps {
     }
 
     public static Cost costOf(WeaponCard card) {
-        return new Cost(card.itemLevel() * 3, card.rarity().equals("unique") ? 10 : 0);
+        var cost = com.thuvstu.hayatemod.core.rules.CraftRules.cost(card);
+        return new Cost(cost.materials(), cost.pity());
     }
 
     public static int craft(ServerPlayer player, String weaponId) {
+        if (!com.thuvstu.hayatemod.town.TownManager.requireTown(player)) return 0;
         if (!ContentHolder.ready()) {
             return 0;
         }
@@ -29,6 +31,8 @@ public final class CraftOps {
             player.sendSystemMessage(Component.literal("[solommo] unknown weapon '" + weaponId + "'"));
             return 0;
         }
+        ItemStack result = WeaponStack.make(weaponId, card.itemLevel());
+        if (result.isEmpty()) return 0;
         Cost cost = costOf(card);
         int haveMat = WeaponStack.countOf(player.getInventory(), ModItems.CRAFT_MATERIAL);
         int havePity = WeaponStack.countOf(player.getInventory(), ModItems.PITY_SHARD);
@@ -41,7 +45,7 @@ public final class CraftOps {
         if (cost.pity() > 0) {
             WeaponStack.removeItems(player.getInventory(), ModItems.PITY_SHARD, cost.pity());
         }
-        player.getInventory().add(WeaponStack.make(weaponId, card.itemLevel()));
+        WeaponStack.giveOrDrop(player, result);
         CodexStore.record(player.getUUID(), weaponId);
         com.thuvstu.hayatemod.progress.AdvancementHelper.grant(player, "first_craft");
         player.sendSystemMessage(Component.literal("[solommo] クラフト成立: " + card.name()));
@@ -50,6 +54,7 @@ public final class CraftOps {
 
     /** Cinder mail crafting (slag_steel sink). Costs: helm 4, chest 7, legs 6, boots 4. */
     public static int craftArmor(ServerPlayer player, String piece) {
+        if (!com.thuvstu.hayatemod.town.TownManager.requireTown(player)) return 0;
         Item item = switch (piece) {
             case "cinder_helm" -> ModItems.CINDER_HELM;
             case "cinder_chest" -> ModItems.CINDER_CHEST;
@@ -72,12 +77,13 @@ public final class CraftOps {
             return 0;
         }
         WeaponStack.removeItems(player.getInventory(), ModItems.SLAG_STEEL, cost);
-        player.getInventory().add(new ItemStack(item));
+        WeaponStack.giveOrDrop(player, new ItemStack(item));
         player.sendSystemMessage(Component.literal("[solommo] 灰甲冑作成: " + piece));
         return 1;
     }
 
     public static int salvage(ServerPlayer player) {
+        if (!com.thuvstu.hayatemod.town.TownManager.requireTown(player)) return 0;
         ItemStack held = player.getMainHandItem();
         WeaponCard card = WeaponStack.resolve(held);
         if (card == null) {
@@ -85,11 +91,11 @@ public final class CraftOps {
             return 0;
         }
         held.shrink(1);
-        int mats = Math.max(1, card.itemLevel() / 5 + 1);
-        player.getInventory().add(new ItemStack(ModItems.CRAFT_MATERIAL, mats));
+        int mats = com.thuvstu.hayatemod.core.rules.CraftRules.salvageMaterials(card);
+        WeaponStack.giveOrDrop(player, new ItemStack(ModItems.CRAFT_MATERIAL, mats));
         String extra = "";
         if (CodexStore.list(player.getUUID()).contains(card.id())) {
-            player.getInventory().add(new ItemStack(ModItems.PITY_SHARD, 2));
+            WeaponStack.giveOrDrop(player, new ItemStack(ModItems.PITY_SHARD, 2));
             extra = "＋重複救済: 欠片x2";
         } else {
             CodexStore.record(player.getUUID(), card.id());

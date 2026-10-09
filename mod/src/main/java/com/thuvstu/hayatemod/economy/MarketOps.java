@@ -31,8 +31,8 @@ public final class MarketOps {
         player.sendSystemMessage(Component.literal("[市場] 買値/売値 (エメラルド) 在庫:"));
         for (var l : book.listings()) {
             double stock = MarketStore.stockOf(l.item());
-            long ask = Math.round(MarketSim.ask(book, l, stock));
-            long bid = Math.round(MarketSim.bid(book, l, stock));
+            long ask = (long) Math.ceil(MarketSim.ask(book, l, stock));
+            long bid = (long) Math.floor(MarketSim.bid(book, l, stock + 1));
             player.sendSystemMessage(Component.literal(
                     "  " + l.item() + " 買" + ask + " / 売" + bid + " (在庫" + (int) stock + ")"));
         }
@@ -40,6 +40,7 @@ public final class MarketOps {
     }
 
     public static int buy(ServerPlayer player, String item, int count) {
+        if (count < 1 || count > 64 || !com.thuvstu.hayatemod.town.TownManager.requireTown(player)) return 0;
         if (!ContentHolder.ready() || ContentHolder.get().market() == null) {
             return 0;
         }
@@ -53,8 +54,13 @@ public final class MarketOps {
             return 0;
         }
         var book = ContentHolder.get().market();
-        long total = Math.round(
-                MarketSim.ask(book, listing, MarketStore.stockOf(item)) * count);
+        int total;
+        try {
+            total = com.thuvstu.hayatemod.core.economy.TradeRules.buy(book, listing, MarketStore.stockOf(item), count);
+        } catch (IllegalArgumentException ex) {
+            player.sendSystemMessage(Component.literal("[市場] 在庫不足または取引上限超過"));
+            return 0;
+        }
         if (WeaponStack.countOf(player.getInventory(), net.minecraft.world.item.Items.EMERALD)
                 < total) {
             player.sendSystemMessage(Component.literal("[市場] エメラルド不足 (要" + total + ")"));
@@ -62,7 +68,7 @@ public final class MarketOps {
         }
         WeaponStack.removeItems(player.getInventory(), net.minecraft.world.item.Items.EMERALD,
                 (int) total);
-        player.getInventory().add(new ItemStack(goods, count));
+        WeaponStack.giveOrDrop(player, new ItemStack(goods, count));
         MarketStore.adjust(item, -count);
         player.sendSystemMessage(
                 Component.literal("[市場] 購入: " + item + " x" + count + " (" + total + "em)"));
@@ -70,6 +76,7 @@ public final class MarketOps {
     }
 
     public static int sell(ServerPlayer player, String item, int count) {
+        if (count < 1 || count > 64 || !com.thuvstu.hayatemod.town.TownManager.requireTown(player)) return 0;
         if (!ContentHolder.ready() || ContentHolder.get().market() == null) {
             return 0;
         }
@@ -87,10 +94,15 @@ public final class MarketOps {
             return 0;
         }
         var book = ContentHolder.get().market();
-        long total = Math.round(
-                MarketSim.bid(book, listing, MarketStore.stockOf(item)) * count);
+        int total;
+        try {
+            total = com.thuvstu.hayatemod.core.economy.TradeRules.sell(book, listing, MarketStore.stockOf(item), count);
+        } catch (IllegalArgumentException ex) {
+            player.sendSystemMessage(Component.literal("[市場] 取引上限超過"));
+            return 0;
+        }
         WeaponStack.removeItems(player.getInventory(), goodsItem, count);
-        player.getInventory().add(new ItemStack(net.minecraft.world.item.Items.EMERALD, (int) total));
+        WeaponStack.giveOrDrop(player, new ItemStack(net.minecraft.world.item.Items.EMERALD, (int) total));
         MarketStore.adjust(item, count);
         player.sendSystemMessage(
                 Component.literal("[市場] 売却: " + item + " x" + count + " (" + total + "em)"));

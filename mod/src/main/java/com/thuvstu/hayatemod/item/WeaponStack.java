@@ -94,6 +94,26 @@ public final class WeaponStack {
         stack.set(ModItems.SOCKETS, java.util.List.copyOf(sockets));
     }
 
+    /** Inventory.add may leave a remainder. Never silently delete purchased/crafted items. */
+    public static void giveOrDrop(net.minecraft.server.level.ServerPlayer player, ItemStack stack) {
+        while (!stack.isEmpty()) {
+            ItemStack chunk = stack.split(Math.min(64, stack.getMaxStackSize()));
+            player.getInventory().add(chunk);
+            if (!chunk.isEmpty()) player.drop(chunk, false);
+        }
+    }
+
+    public static boolean consumeRune(net.minecraft.world.entity.player.Inventory inventory, String runeId) {
+        for (int i = 0; i < inventory.getContainerSize(); i++) {
+            ItemStack stack = inventory.getItem(i);
+            if (!stack.isEmpty() && stack.getItem() == ModItems.RUNE && runeId.equals(stack.get(ModItems.RUNE_ID))) {
+                stack.shrink(1);
+                return true;
+            }
+        }
+        return false;
+    }
+
     public static int countOf(net.minecraft.world.entity.player.Inventory inventory, Item item) {
         int n = 0;
         for (int i = 0; i < inventory.getContainerSize(); i++) {

@@ -1,12 +1,14 @@
 # 実行語彙の正本（最小・Phase 0）
 # Phase 1 の検証器はここに無い語をエラーにする。勝手に語を増やさない。
 skill_cores:
+  - self_buff
   - melee_thrust
   - projectile_single
   - heavy_slam
   - summon_minions
   - dash
 triggers:
+  - on_cast
   - on_hit
   - on_kill
   - on_damaged
@@ -15,6 +17,7 @@ triggers:
   - on_timer
   - on_join
 conditions:
+  - self_has_shield
   - target_has_status
   - chance
   - sneaking
@@ -29,6 +32,10 @@ conditions:
   - raining
   - entity_type
 actions:
+  - reduce_next_cast
+  - grant_shield
+  - heal_with_shield
+  - reduce_cooldown
   - spawn_projectiles
   - dash
   - heal_self
@@ -72,6 +79,7 @@ signals:
   - MOVE_TO_SAFE_SPOT
 # タグは用途別の名前空間で管理。role_hint / slot_tags と混用しない。
 tag_namespaces:
+  - utility
   - element
   - delivery
   - status
@@ -83,3 +91,13 @@ limits:
   max_chain_depth: 3
   max_projectiles: 8
   max_radius: 12.0
+  # イベント条件評価・効果アクション・遅延タスクの実行予算（全プレイヤー共有）
+  max_effects_per_tick: 256
+  max_actions_per_tick: 512
+  max_tasks_per_tick: 128
+  max_pending_tasks: 1024
+  max_shield_amount: 200
+  max_shield_duration_ticks: 1200
+  max_cooldown_reduction_seconds: 30
+  max_cast_seconds: 30
+  max_cast_boost_duration_ticks: 1200

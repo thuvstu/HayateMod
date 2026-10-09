@@ -6,6 +6,7 @@ import com.thuvstu.hayatemod.build.BuildOps;
 import com.thuvstu.hayatemod.build.PlayerBuilds;
 import com.thuvstu.hayatemod.codex.CodexStore;
 import com.thuvstu.hayatemod.dungeon.DungeonCommand;
+import com.thuvstu.hayatemod.dungeon.EncounterRunner;
 import com.thuvstu.hayatemod.economy.MarketOps;
 import com.thuvstu.hayatemod.item.CraftOps;
 import com.thuvstu.hayatemod.life.LifeSkills;
@@ -61,13 +62,34 @@ public final class SolommoCommand {
                                                     "[solommo] (debug) pity_shard x" + n));
                                             return 1;
                                         })))
+                        .then(Commands.literal("difficulty")
+                                .executes(ctx -> {
+                                    ctx.getSource().sendSuccess(() -> Component.literal("[難易度] " + DifficultyState.selected()), false);
+                                    return 1;
+                                })
+                                .then(Commands.argument("id", StringArgumentType.string()).executes(ctx -> {
+                                    ctx.getSource().getPlayerOrException();
+                                    String message = DifficultyState.change(ctx.getSource().getServer(), StringArgumentType.getString(ctx, "id"));
+                                    ctx.getSource().sendSuccess(() -> Component.literal(message), false);
+                                    return 1;
+                                })))
                         .then(Commands.literal("exchange").executes(ctx -> exchange(
                                 ctx.getSource().getPlayerOrException(), "solommo:flame_golem_loot")))
                         .then(Commands.literal("reload").requires(op2()).executes(ctx -> {
-                            ContentHolder.load();
-                            if (ContentHolder.ready()) {
-                                McAdapter.init(ctx.getSource().getServer());
+                            var server = ctx.getSource().getServer();
+                            // Town-only until a shared field-combat tracker exists. Check
+                            // every player so console execution cannot bypass the guard.
+                            if (!DifficultyState.canChange(server)) {
+                                ctx.getSource().sendFailure(Component.literal(
+                                        "[solommo] reload は全員が街にいて、エンカウンター外の時だけ実行できます"));
+                                return 0;
                             }
+                            if (!ContentHolder.load()) {
+                                ctx.getSource().sendFailure(Component.literal(
+                                        "[solommo] reload 失敗。既存データを維持しました。ログを確認してください"));
+                                return 0;
+                            }
+                            McAdapter.init(server);
                             ctx.getSource().sendSuccess(
                                     () -> Component.literal("[solommo] reloaded from "
                                             + ContentHolder.source()),
@@ -248,7 +270,7 @@ public final class SolommoCommand {
             player.sendSystemMessage(Component.literal("[solommo] cannot make '" + weaponId + "'"));
             return 0;
         }
-        player.getInventory().add(stack);
+        WeaponStack.giveOrDrop(player, stack);
         CodexStore.record(player.getUUID(), weaponId);
         player.sendSystemMessage(
                 Component.literal("[solommo] " + card.name() + " (IL" + level + ") を入手"));
@@ -269,10 +291,11 @@ public final class SolommoCommand {
                     + table.exchangeCost() + ")"));
             return 0;
         }
-        WeaponStack.removeItems(player.getInventory(), ModItems.PITY_SHARD, table.exchangeCost());
         var card = ContentHolder.get().weapons().get(table.exchangeItem());
         ItemStack stack = WeaponStack.make(table.exchangeItem(), card != null ? card.itemLevel() : 1);
-        player.getInventory().add(stack);
+        if (stack.isEmpty()) return 0;
+        WeaponStack.removeItems(player.getInventory(), ModItems.PITY_SHARD, table.exchangeCost());
+        WeaponStack.giveOrDrop(player, stack);
         CodexStore.record(player.getUUID(), table.exchangeItem());
         player.sendSystemMessage(Component.literal("[solommo] 交換成立: " + table.exchangeItem()));
         return 1;
@@ -283,12 +306,13 @@ public final class SolommoCommand {
             player.sendSystemMessage(Component.literal("[solommo] unknown rune '" + runeId + "'"));
             return 0;
         }
-        player.getInventory().add(WeaponStack.makeRune(runeId));
+        WeaponStack.giveOrDrop(player, WeaponStack.makeRune(runeId));
         player.sendSystemMessage(Component.literal("[solommo] ルーン入手: " + runeId));
         return 1;
     }
 
     private static int socket(ServerPlayer player, int slot, String runeId) {
+        if (!TownManager.requireTown(player) || slot < 0 || slot >= ModItems.SOCKET_COUNT) return 0;
         if (!ContentHolder.ready() || !ContentHolder.get().runes().containsKey(runeId)) {
             player.sendSystemMessage(Component.literal("[solommo] unknown rune '" + runeId + "'"));
             return 0;
@@ -298,16 +322,15 @@ public final class SolommoCommand {
             player.sendSystemMessage(Component.literal("[solommo] 武器を持って"));
             return 0;
         }
-        if (WeaponStack.countOf(player.getInventory(), ModItems.RUNE) < 1
-                && !runeId.equals(WeaponStack.getRunes(held).get(slot))) {
-            player.sendSystemMessage(Component.literal("[solommo] ルーン品を持っていない"));
+        String old = WeaponStack.getRunes(held).get(slot);
+        if (runeId.equals(old)) return 1; // No-op, not an opportunity to duplicate the old rune.
+        if (!WeaponStack.consumeRune(player.getInventory(), runeId)) {
+            player.sendSystemMessage(Component.literal("[solommo] 指定IDのルーン品を持っていない"));
             return 0;
         }
-        String old = WeaponStack.getRunes(held).get(slot);
-        WeaponStack.removeItems(player.getInventory(), ModItems.RUNE, 1);
         WeaponStack.setRune(held, slot, runeId);
         if (!old.isEmpty()) {
-            player.getInventory().add(WeaponStack.makeRune(old));
+            WeaponStack.giveOrDrop(player, WeaponStack.makeRune(old));
         }
         player.sendSystemMessage(
                 Component.literal("[solommo] socket" + slot + " <- " + runeId + " (IL" + held.get(ModItems.ITEM_LEVEL) + ")"));
@@ -315,12 +338,17 @@ public final class SolommoCommand {
     }
 
     public static String toggleKeystone(ServerPlayer player, String id) {
+        if (!TownManager.requireTown(player)) return "街・非戦闘時のみ変更できます";
         String msg = PlayerBuilds.toggleKeystone(player.getUUID(), id);
         player.sendSystemMessage(Component.literal("[solommo] " + msg));
         return msg;
     }
 
     public static int saveLoadout(ServerPlayer player, String name) {
+        if (!TownManager.requireTown(player) || name == null || name.isBlank() || name.length() > 32
+                || name.chars().anyMatch(Character::isISOControl)) return 0;
+        var names = PlayerBuilds.loadoutNames(player.getUUID());
+        if (!names.contains(name) && names.size() >= 16) return 0;
         var card = WeaponStack.resolve(player.getMainHandItem());
         PlayerBuilds.saveLoadout(player.getUUID(), name,
                 card != null ? card.id() : "");
@@ -434,7 +462,7 @@ public final class SolommoCommand {
         spec.material = material;
         spec.itemLevel = itemLevel;
         String id = com.thuvstu.hayatemod.forge.ForgedStore.put(spec);
-        player.getInventory().add(WeaponStack.makeForged(id, style, itemLevel, name));
+        WeaponStack.giveOrDrop(player, WeaponStack.makeForged(id, style, itemLevel, name));
         player.sendSystemMessage(Component.literal("[forge] 鍛造: " + name + " (" + id + ")"));
         return 1;
     }

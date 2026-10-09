@@ -49,40 +49,30 @@ public final class DropHooks {
 
     /** Shared roll used by wild kills and the encounter runner (boss rewards). */
     public static void rollTable(LivingEntity entity, ServerLevel level, LootTable table,
-            ServerPlayer killer) {        var random = level.random;
-        for (var drop : table.direct()) {
-            if (random.nextFloat() < drop.p()) {
-                var card = ContentHolder.get().weapons().get(drop.item());
-                ItemStack stack = WeaponStack.make(drop.item(), card != null ? card.itemLevel() : 1);
-                if (stack.isEmpty()) {
-                    LOGGER.warn("[DROP] cannot make '{}'", drop.item());
-                    continue;
-                }
-                entity.spawnAtLocation(level, stack);
-                CodexStore.record(killer.getUUID(), drop.item());
-                LOGGER.info("[DROP] {} dropped {} for {}", entity.getScoreboardName(), drop.item(),
-                        killer.getScoreboardName());
-            }
-        }
-        if (table.perKill() > 0) {
-            entity.spawnAtLocation(level, new ItemStack(ModItems.PITY_SHARD, table.perKill()));
-        }
-        for (var mat : table.materials()) {
-            int n = mat.min() + random.nextInt(mat.max() - mat.min() + 1);
-            if (n <= 0) {
-                continue;
-            }
-            ItemStack stack = materialStack(mat.item(), n);
+            ServerPlayer killer) {
+        var random = level.random;
+        var roll = com.thuvstu.hayatemod.core.rules.LootRoller.roll(table, DifficultyState.snapshot(entity),
+                random::nextDouble, random::nextInt);
+        if (!roll.equipment().isEmpty()) {
+            var card = ContentHolder.get().weapons().get(roll.equipment());
+            ItemStack stack = WeaponStack.make(roll.equipment(), card != null ? card.itemLevel() : 1);
             if (!stack.isEmpty()) {
                 entity.spawnAtLocation(level, stack);
+                CodexStore.record(killer.getUUID(), roll.equipment());
+                LOGGER.info("[DROP] {} dropped {} for {}", entity.getScoreboardName(), roll.equipment(), killer.getScoreboardName());
             }
         }
-        for (var rune : table.runes()) {
-            if (random.nextFloat() < rune.p()) {
-                entity.spawnAtLocation(level, WeaponStack.makeRune(rune.id()));
-                LOGGER.info("[DROP] {} dropped rune {} for {}", entity.getScoreboardName(), rune.id(),
-                        killer.getScoreboardName());
-            }
+        spawnCount(entity, level, "pity_shard", roll.pity());
+        for (var material : roll.materials()) spawnCount(entity, level, material.id(), material.count());
+        for (String rune : roll.runes()) entity.spawnAtLocation(level, WeaponStack.makeRune(rune));
+    }
+
+    private static void spawnCount(LivingEntity entity, ServerLevel level, String id, int count) {
+        // Never create oversized stacks, even when difficulty increases guaranteed rewards.
+        for (int left = Math.min(4096, count); left > 0; left -= 64) {
+            int size = Math.min(64, left);
+            ItemStack stack = id.equals("pity_shard") ? new ItemStack(ModItems.PITY_SHARD, size) : materialStack(id, size);
+            if (!stack.isEmpty()) entity.spawnAtLocation(level, stack);
         }
     }
 

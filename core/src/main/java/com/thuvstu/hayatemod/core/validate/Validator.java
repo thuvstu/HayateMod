@@ -32,7 +32,7 @@ import com.thuvstu.hayatemod.core.validate.Issue.Severity;
  * cycle report, V06 runtime guards, V07 party size, V08 capability coverage,
  * V09 lethal requirements, V12 drop sums, V13 pity consistency.
  * V10 (description templates) is enforced by the describer throwing on gaps.
- * V11 (by_id overrides) has no data mechanism yet.
+ * V11 reports excessive individual ruleset overrides.
  */
 public final class Validator {
     /** Actions that can re-emit combat events, mapped to the triggers they can fire. */
@@ -45,6 +45,57 @@ public final class Validator {
     public static List<Issue> validate(ContentSet set) {
         List<Issue> issues = new ArrayList<>();
         Vocabulary v = set.vocabulary();
+        var casting = v.castingLimits();
+        if (!Double.isFinite(casting.maxCastSeconds()) || casting.maxCastSeconds() <= 0 || casting.maxCastSeconds() > 60
+                || casting.maxBoostDurationTicks() < 1 || casting.maxBoostDurationTicks() > 72000) {
+            issues.add(err("V03", "vocabulary:limits", "invalid casting limits"));
+        }
+        var combat = v.combatLimits();
+        if (!Double.isFinite(combat.maxShieldAmount()) || combat.maxShieldAmount() <= 0
+                || combat.maxShieldAmount() > 1000000 || combat.maxShieldDurationTicks() < 1
+                || combat.maxShieldDurationTicks() > 72000
+                || !Double.isFinite(combat.maxCooldownReductionSeconds())
+                || combat.maxCooldownReductionSeconds() <= 0 || combat.maxCooldownReductionSeconds() > 3600) {
+            issues.add(err("V03", "vocabulary:limits", "invalid shield/cooldown limits"));
+        }
+        var limits = v.executionLimits();
+        Map<String, Integer> budgets = Map.of("max_effects_per_tick", limits.effectsPerTick(),
+                "max_actions_per_tick", limits.actionsPerTick(), "max_tasks_per_tick", limits.tasksPerTick(),
+                "max_pending_tasks", limits.pendingTasks());
+        for (var entry : budgets.entrySet()) {
+            if (entry.getValue() <= 0 || entry.getValue() > 65536) {
+                issues.add(err("V03", "vocabulary:limits." + entry.getKey(), "budget must be within [1, 65536]"));
+            }
+        }
+        if (v.maxChainDepth() < 0 || v.maxChainDepth() > 3) {
+            issues.add(err("V03", "vocabulary:limits.max_chain_depth", "chain depth must be within [0, 3]"));
+        }
+        if (v.maxProjectiles() < 1 || v.maxProjectiles() > 256) {
+            issues.add(err("V03", "vocabulary:limits.max_projectiles", "projectiles must be within [1, 256]"));
+        }
+        for (var rules : set.rulesets().values()) {
+            String loc = "rulesets:" + rules.id();
+            checkRulePatch(rules.defaults(), loc, issues);
+            Set<String> tags = new HashSet<>();
+            for (var enemy : set.enemies().values()) {
+                tags.addAll(enemy.tags());
+                tags.add("rank:" + enemy.rank());
+                tags.add("species:" + enemy.species());
+            }
+            Set<String> seen = new HashSet<>();
+            for (var tag : rules.tagOverrides()) {
+                checkRulePatch(tag.patch(), loc + ".tag_overrides." + tag.tag(), issues);
+                if (!tags.contains(tag.tag())) issues.add(err("V04", loc, "unmatched enemy tag '" + tag.tag() + "'"));
+                if (!seen.add(tag.tag())) issues.add(err("V01", loc, "duplicate tag override '" + tag.tag() + "'"));
+            }
+            for (var entry : rules.byId().entrySet()) {
+                checkRulePatch(entry.getValue(), loc + ".by_id." + entry.getKey(), issues);
+                if (!set.enemies().containsKey(entry.getKey())) issues.add(err("V04", loc, "unknown enemy '" + entry.getKey() + "'"));
+            }
+            if (rules.byId().size() > 3) {
+                issues.add(new Issue(Severity.WARNING, "V11", loc, "more than 3 by_id overrides; prefer shared enemy tags"));
+            }
+        }
         for (WeaponCard w : set.weapons().values()) {
             checkWeapon(set, w, issues);
         }
@@ -58,6 +109,7 @@ public final class Validator {
             checkLoot(set, t, issues);
         }
         for (var r : set.runes().values()) {
+            checkEffectIdentities(r.effects(), "runes:" + r.id(), issues);
             for (int i = 0; i < r.effects().size(); i++) {
                 checkEffect(set, r.id(), r.effects().get(i), "runes:" + r.id() + ".effects[" + i + "]",
                         issues);
@@ -99,6 +151,15 @@ public final class Validator {
 
     // ---- weapons ----
 
+    private static void checkRulePatch(com.thuvstu.hayatemod.core.content.model.Models.RulePatch patch,
+            String loc, List<Issue> issues) {
+        for (Double value : new Double[] {patch.hp(), patch.dps(), patch.pity(), patch.materials()}) {
+            if (value != null && (!Double.isFinite(value) || value <= 0 || value > 100)) {
+                issues.add(err("V03", loc, "rule multiplier must be within (0, 100]"));
+            }
+        }
+    }
+
     private static void checkWeapon(ContentSet set, WeaponCard w, List<Issue> issues) {
         String loc = "weapons:" + w.id();
         Vocabulary v = set.vocabulary();
@@ -108,8 +169,18 @@ public final class Validator {
         for (String t : w.tagsExtra()) {
             checkTag(set, t, loc, issues);
         }
+        checkEffectIdentities(w.skills().values().stream().flatMap(s -> s.effects().stream()).toList(), loc, issues);
         for (Map.Entry<String, SkillDef> e : w.skills().entrySet()) {
             checkSkillCore(set, e.getValue().core(), loc + ".skills." + e.getKey(), issues);
+            if (e.getValue().core().equals("self_buff") && !Set.of("special", "heavy").contains(e.getKey())) {
+                issues.add(err("V06", loc, "self_buff requires an active special/heavy slot"));
+            }
+            Object castTime = e.getValue().mods().get("cast_time");
+            if (castTime instanceof Number n && (!Double.isFinite(n.doubleValue()) || n.doubleValue() < 0
+                    || n.doubleValue() > v.castingLimits().maxCastSeconds()
+                    || (n.doubleValue() > 0 && !Set.of("special", "heavy").contains(e.getKey())))) {
+                issues.add(err("V03", loc, "cast_time must be bounded, nonnegative and on an active slot"));
+            }
             checkTimerInterval(e.getValue(), loc + ".skills." + e.getKey(), issues);
             checkResourceCost(e.getValue(), loc + ".skills." + e.getKey(), issues);
             Object element = e.getValue().mods().get("element");
@@ -119,6 +190,15 @@ public final class Validator {
             for (int i = 0; i < e.getValue().effects().size(); i++) {
                 checkEffect(set, w.id(), e.getValue().effects().get(i),
                         loc + ".skills." + e.getKey() + ".effects[" + i + "]", issues);
+                var effect = e.getValue().effects().get(i);
+                if (effect.trigger().equals("on_cast") && !Set.of("special", "heavy").contains(e.getKey())) {
+                    issues.add(err("V06", loc, "on_cast requires an active special/heavy slot"));
+                }
+                for (ActionDef action : effect.actions()) {
+                    if (Set.of("reduce_cooldown", "reduce_next_cast").contains(action.type()) && !w.skills().containsKey(action.ref())) {
+                        issues.add(err("V04", loc, "dangling timed-skill slot '" + action.ref() + "'"));
+                    }
+                }
             }
         }
     }
@@ -156,8 +236,23 @@ public final class Validator {
             issues.add(err("V03", loc, "resource_cost must be positive"));
         }
     }
+    private static void checkEffectIdentities(List<EffectDef> effects, String loc, List<Issue> issues) {
+        Set<String> seen = new HashSet<>();
+        for (EffectDef effect : effects) {
+            if (!effect.id().isEmpty() && !seen.add(effect.source() + "#" + effect.id())) {
+                issues.add(err("V01", loc, "duplicate effect id '" + effect.id() + "' in source '" + effect.source() + "'"));
+            }
+        }
+    }
+
     static void checkEffect(ContentSet set, String ownerId, EffectDef e, String loc, List<Issue> issues) {
         Vocabulary v = set.vocabulary();
+        if (e.priority() < -1000 || e.priority() > 1000) {
+            issues.add(err("V03", loc, "effect priority must be within [-1000,1000]"));
+        }
+        if (!e.id().isEmpty() && (e.id().length() > 128 || !e.id().matches("[A-Za-z0-9_./:-]+"))) {
+            issues.add(err("V01", loc, "effect id must be a stable token of at most 128 characters"));
+        }
         if (!v.triggers().contains(e.trigger())) {
             issues.add(err("V02", loc, "undefined trigger '" + e.trigger() + "'"));
         }
@@ -198,6 +293,9 @@ public final class Validator {
         }
         for (var a : e.actions()) {
             checkAction(set, a, loc, issues);
+            if (e.scope().equals("area") && Set.of("grant_shield", "heal_with_shield", "reduce_cooldown", "reduce_next_cast").contains(a.type())) {
+                issues.add(err("V06", loc, "owner-only recovery/cooldown actions do not support area scope"));
+            }
         }
         if (e.maxChainDepth() < 0) {
             issues.add(err("V06", loc, "effect requires flags.max_chain_depth"));
@@ -237,6 +335,35 @@ public final class Validator {
                 && !a.target().equals("nearest_enemy_in_radius")
                 && !a.target().equals("party")) {
             issues.add(err("V02", loc, "unknown action target '" + a.target() + "'"));
+        }
+        if (Set.of("grant_shield", "heal_with_shield", "reduce_cooldown", "reduce_next_cast").contains(a.type())) {
+            var combat = v.combatLimits();
+            double limit = a.type().equals("reduce_next_cast") ? v.castingLimits().maxCastSeconds()
+                    : a.type().equals("reduce_cooldown") ? combat.maxCooldownReductionSeconds()
+                    : combat.maxShieldAmount();
+            if (!Double.isFinite(a.amount()) || a.amount() <= 0 || a.amount() > limit) {
+                issues.add(err("V03", loc, a.type() + " amount must be within (0, " + limit + "]"));
+            }
+            if (!a.formula().isEmpty() || !a.target().isEmpty()) {
+                issues.add(err("V06", loc, a.type() + " uses a fixed amount and the owner; formula/target are unsupported"));
+            }
+            if (Set.of("reduce_cooldown", "reduce_next_cast").contains(a.type())) {
+                if (a.type().equals("reduce_next_cast") && (a.durationTicks() < 1
+                        || a.durationTicks() > v.castingLimits().maxBoostDurationTicks())) {
+                    issues.add(err("V03", loc, "next-cast boost duration_ticks outside limits"));
+                }
+                if (!Set.of("special", "heavy").contains(a.ref())) {
+                    issues.add(err("V06", loc, "cooldown/cast reduction ref must be special or heavy"));
+                }
+            } else {
+                if (a.durationTicks() < 1 || a.durationTicks() > combat.maxShieldDurationTicks()) {
+                    issues.add(err("V03", loc, "shield duration_ticks is outside vocabulary limits"));
+                }
+                if (a.type().equals("heal_with_shield") && (!Double.isFinite(a.shieldRatio())
+                        || a.shieldRatio() < 0 || a.shieldRatio() > 1)) {
+                    issues.add(err("V03", loc, "shield_ratio must be within [0, 1]"));
+                }
+            }
         }
         if (a.type().equals("apply_status")
                 && (a.status() == null || !v.statuses().contains(a.status()))) {
@@ -397,6 +524,9 @@ public final class Validator {
 
     private static void checkAbilityCore(ContentSet set, AbilityDef a, String loc, List<Issue> issues) {
         checkSkillCore(set, a.core(), loc, issues);
+        if (a.core().equals("self_buff")) {
+            issues.add(err("V06", loc, "self_buff is a player weapon core, not an encounter ability"));
+        }
         if (a.lethal()) {
             if (!a.telegraph()) {
                 issues.add(err("V09", loc, "lethal ability requires telegraph: true"));
@@ -430,6 +560,14 @@ public final class Validator {
     // ---- loot ----
 
     private static void checkLoot(ContentSet set, LootTable t, List<Issue> issues) {
+        if (t.perKill() < 0 || t.perKill() > 4096) {
+            issues.add(err("V03", "loot:" + t.id(), "pity per_kill must be within [0,4096]"));
+        }
+        for (var material : t.materials()) {
+            if (material.min() < 0 || material.max() < material.min() || material.max() > 4096) {
+                issues.add(err("V03", "loot:" + t.id(), "material range must be within [0,4096]"));
+            }
+        }
         String loc = "loot:" + t.id();
         double sum = t.direct().stream().mapToDouble(DirectDrop::p).sum();
         if (sum > 1.0 + 1e-9) {

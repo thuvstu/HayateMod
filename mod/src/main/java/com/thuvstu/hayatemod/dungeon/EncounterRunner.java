@@ -291,9 +291,10 @@ public final class EncounterRunner {
 
     private static UUID spawnBoss(ServerLevel world, EnemyData foe) {
         var tuning = ContentHolder.get().tuning();
+        var rules = com.thuvstu.hayatemod.rpg.DifficultyState.resolve(foe);
         EnemyStats.DerivedStats stats = EnemyStats.derive(foe.level(), foe.rank(),
                 ContentHolder.get().reference(),
-                tuning != null ? tuning.rankTargets() : Map.of(), 1.0, 1.0);
+                tuning != null ? tuning.rankTargets() : Map.of(), rules.hp(), rules.dps());
         bossMaxHp = stats.maxHp();
         boolean manual = foe.bossBody().equals("iron_golem");
         Mob boss;
@@ -325,6 +326,7 @@ public final class EncounterRunner {
         mob.addTag("solommo_session");
         mob.addTag("solommo_boss");
         mob.addTag("solommo_enemy:" + foe.id());
+        com.thuvstu.hayatemod.rpg.DifficultyState.bind(mob, com.thuvstu.hayatemod.rpg.DifficultyState.resolve(foe));
     }
 
     // ---- tick ----
@@ -567,6 +569,10 @@ public final class EncounterRunner {
             }
             UUID task = McAdapter.engine().schedule((long) (castSec * 20.0),
                     () -> executeAbility(a, center));
+            if (task == null) {
+                LOGGER.warn("[DUNGEON] skipped {}: effect task queue is full", a.id());
+                return;
+            }
             WINDUP.add(new Windup(task, a, center, executeTick, false));
             LOGGER.info("[DUNGEON] windup {} ({}s)", a.id(), castSec);
         } else {
@@ -618,7 +624,8 @@ public final class EncounterRunner {
 
     private static void detonateLethal(AbilityDef a, LivingEntity boss, Vec3 center) {
         double radius = abilityRadius(a);
-        double total = a.lethalRatio() * RpgHealth.maxHp();
+        double total = a.lethalRatio() * RpgHealth.maxHp()
+                * com.thuvstu.hayatemod.rpg.DifficultyState.snapshot(boss).dps();
         List<LivingEntity> inArea = new ArrayList<>();
         ServerPlayer player = EntityTypeTestHelper.serverPlayer(level, playerId);
         if (player != null && player.isAlive() && !player.isCreative()

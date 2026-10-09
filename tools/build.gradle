@@ -51,3 +51,23 @@ tasks.register("marketSim", JavaExec) {
     def extra = findProperty("cliArgs")?.toString()?.split("\\s+")?.toList() ?: []
     args = [contentDir] + extra
 }
+
+tasks.register("collectionSim", JavaExec) {
+    group = "solommo"
+    description = "Seeded loot/exchange/craft collection timing; -PcliArgs='enemy ruleset minutes item,item [seed trials maxRuns]'."
+    workingDir = rootProject.projectDir
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = "com.thuvstu.hayatemod.tools.CollectionSimMain"
+    def extra = findProperty("cliArgs")?.toString()?.split("\\s+")?.toList() ?: []
+    args = [contentDir] + extra
+}
+
+tasks.register("effectFuzz", JavaExec) {
+    group = "solommo"
+    description = "Seeded core effect stress distributions; -PcliArgs='seed samples ticks'."
+    workingDir = rootProject.projectDir
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = "com.thuvstu.hayatemod.tools.EffectFuzzMain"
+    def extra = findProperty("cliArgs")?.toString()?.split("\\s+")?.toList() ?: []
+    args = [contentDir] + extra
+}

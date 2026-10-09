@@ -5,13 +5,11 @@ import com.thuvstu.hayatemod.content.ContentHolder;
 import com.thuvstu.hayatemod.core.build.WeaponSkillMerger;
 import com.thuvstu.hayatemod.core.content.model.Models.SkillDef;
 import com.thuvstu.hayatemod.core.content.model.Models.WeaponCard;
-import com.thuvstu.hayatemod.core.describe.Describer;
 import com.thuvstu.hayatemod.core.engine.CastContext;
 import com.thuvstu.hayatemod.core.engine.EffectEngine.CastOutcome;
 import com.thuvstu.hayatemod.core.engine.EffectEngine.CastResult;
 import com.thuvstu.hayatemod.net.UiServer;
 import com.thuvstu.hayatemod.item.WeaponStack;
-import com.thuvstu.hayatemod.net.UiServer;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import org.slf4j.Logger;
@@ -33,7 +31,14 @@ public final class RpgSkills {
 
     /** Casts a named weapon slot ("special" or "heavy"). Unknown slots are rejected. */
     public static void castHeldSlot(ServerPlayer player, String slot) {
-        if (!slot.equals("special") && !slot.equals("heavy")) {
+        if ("cancel".equals(slot)) {
+            if (McAdapter.engine() != null && McAdapter.engine().cancelCast(player.getUUID())) {
+                UiServer.sendCombatState(player);
+                player.sendSystemMessage(Component.literal("[RPG] 詠唱中断（消費・CDは戻りません）"));
+            }
+            return;
+        }
+        if (!player.isAlive() || player.isSpectator() || (!slot.equals("special") && !slot.equals("heavy"))) {
             return;
         }
         if (McAdapter.engine() == null || !ContentHolder.ready()) {
@@ -55,12 +60,10 @@ public final class RpgSkills {
         }
         CastOutcome out = McAdapter.engine().castSkill(player.getUUID(),
                 withSkill(card, slot, skill), slot, mods);
-        if (out.result() == CastResult.OK) {
+        if (out.result() == CastResult.OK || out.result() == CastResult.CASTING) {
+            DifficultyState.markCombat(player);
             LOGGER.info("[RPG][CAST] {} {} {}", player.getScoreboardName(), slot, card.id());
-            var effective = withSkill(card, slot, skill);
-            long cd = McAdapter.engine().cooldownTicks(effective, slot, mods);
-            UiServer.sendSkill(player, card.name(), Describer.describeSkill(skill), (int) cd,
-                    (int) cd);
+            UiServer.sendCombatState(player);
             var adapter = McAdapter.adapter();
             if (adapter != null) {
                 adapter.ringParticles(player.getUUID(), adapter.pos(player.getUUID()), 0.5);
@@ -97,7 +100,13 @@ public final class RpgSkills {
     }
 
     private static void report(ServerPlayer player, CastOutcome out) {
-        if (out.result() == CastResult.ON_COOLDOWN) {
+        if (out.result() == CastResult.CASTING) {
+            player.sendSystemMessage(Component.literal("[RPG] 詠唱開始 " + out.remainingTicks() / 20.0 + "秒（Shift+Gで中断）"));
+        } else if (out.result() == CastResult.ALREADY_CASTING) {
+            player.sendSystemMessage(Component.literal("[RPG] 詠唱中です"));
+        } else if (out.result() == CastResult.LIMIT_REACHED) {
+            player.sendSystemMessage(Component.literal("[RPG] 予約上限のため発動できません（消費なし）"));
+        } else if (out.result() == CastResult.ON_COOLDOWN) {
             player.sendSystemMessage(Component.literal(
                     "[RPG] CD中 (残り約" + out.remainingTicks() / 20.0 + "秒)"));
         } else if (out.result() == CastResult.NO_RESOURCE) {

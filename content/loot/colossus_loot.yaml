@@ -1,5 +1,7 @@
 id: solommo:colossus_loot
 direct:
+  - item: solommo:cinder_aegis
+    p: 0.04
   - item: solommo:slag_cleaver
     p: 0.077
 pity:

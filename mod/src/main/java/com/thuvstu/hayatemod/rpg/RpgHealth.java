@@ -60,11 +60,19 @@ public final class RpgHealth {
         // S1 shield runs first and may already have cancelled (returns false stops the chain).
         double max = maxHp();
         double cur = HP.getOrDefault(player.getUUID(), max);
-        double next = cur - amount;
+        var engine = McAdapter.engine();
+        double effective = engine == null ? amount : engine.absorbShield(player.getUUID(), amount);
+        if (effective <= 0) {
+            return false;
+        }
+        double next = cur - effective;
         if (next <= 0.0) {
             // Lethal: pin vanilla HP near zero and let the normal fatal path run so
             // ALLOW_DEATH hooks (debug wipetest, dungeon wipe) observe the death.
             HP.put(player.getUUID(), 0.0);
+            if (engine != null) {
+                engine.clearShield(player.getUUID());
+            }
             player.setHealth(0.01F);
             LOGGER.info("[RPG][DEATH] {} src={} amount={}", player.getScoreboardName(),
                     source.getMsgId(), amount);
@@ -79,6 +87,7 @@ public final class RpgHealth {
 
     /** Full restore (checkpoints, wipe recovery, debug). */
     public static void restore(ServerPlayer player) {
+        clearShield(player.getUUID());
         double max = maxHp();
         HP.put(player.getUUID(), max);
         player.setHealth(20.0F);
@@ -103,5 +112,12 @@ public final class RpgHealth {
     /** Test/debug reset. */
     static void reset(UUID player) {
         HP.remove(player);
+        clearShield(player);
+    }
+
+    private static void clearShield(UUID player) {
+        if (McAdapter.engine() != null) {
+            McAdapter.engine().clearShield(player);
+        }
     }
 }

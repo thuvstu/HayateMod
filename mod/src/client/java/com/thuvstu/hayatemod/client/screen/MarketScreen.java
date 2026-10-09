@@ -46,7 +46,7 @@ public class MarketScreen extends Screen {
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         super.render(graphics, mouseX, mouseY, partialTick);
-        graphics.drawCenteredString(font, "市場（エメラルド建て）", width / 2, 15, 0xFFFFFF);
+        graphics.drawCenteredString(font, "市場（次の1個の価格・まとめ買いは単価変動）", width / 2, 15, 0xFFFFFF);
         int y = 46;
         for (MarketRow row : rows) {
             graphics.drawString(font,

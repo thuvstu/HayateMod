@@ -8,6 +8,7 @@ critical:
 # item_level 曲線・レベル曲線は未導入のため、エンジンは暫定式
 # item_curve = 1 + 0.05 * item_level を使用（ADR-08 参照）
 core_base:
+  self_buff: 0.0
   melee_thrust: 6.0
   projectile_single: 5.0
   heavy_slam: 12.0

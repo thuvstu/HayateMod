@@ -5,5 +5,8 @@
   "item.hayatemod.rune": "ルーン（汎用）",
   "item.hayatemod.pity_shard": "欠片",
   "item.hayatemod.craft_material": "素材",
-  "key.hayatemod.firebolt": "スキル発動"
+  "key.hayatemod.firebolt": "スキル発動",
+  "item.hayatemod.cinder_aegis": "灰守の誓剣",
+  "item.hayatemod.echo_reaver": "残響の追撃剣",
+  "item.hayatemod.ashen_chant": "灰詠みの杖"
 }

@@ -57,6 +57,15 @@ public final class ReportMain {
                 use.accept(d.item(), "loot:" + t.id());
             }
         }
+        System.out.println("== effect order (per skill; priority, source kind/id, effect id) ==");
+        for (var card : new TreeMap<>(set.weapons()).values()) {
+            for (var entry : new TreeMap<>(card.skills()).entrySet()) {
+                for (var effect : com.thuvstu.hayatemod.core.engine.EffectOrder.ordered(entry.getValue().effects(), card.id() + ":" + entry.getKey())) {
+                    System.out.println(card.id() + ":" + entry.getKey() + " " + effect.trigger() + " priority=" + effect.priority()
+                            + " source=" + effect.source() + " id=" + effect.id());
+                }
+            }
+        }
         System.out.println("== counts ==");
         System.out.println("weapons=" + set.weapons().size() + " enemies=" + set.enemies().size()
                 + " encounters=" + set.encounters().size() + " skills=" + set.skills().size()

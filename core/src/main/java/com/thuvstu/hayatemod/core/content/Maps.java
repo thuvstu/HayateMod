@@ -33,9 +33,9 @@ public final class Maps {
         return null;
     }
 
-    public static String optStr(Map<String, Object> map, String key, String def) {
-        Object v = map.get(key);
-        return v instanceof String s ? s : def;
+    public static String optStr(Map<String, Object> map, String key, String def,
+            String file, String loc, List<ContentError> errors) {
+        return optional(map, key, String.class, def, file, loc, errors, "string");
     }
 
     public static Integer reqInt(Map<String, Object> map, String key, String file, String loc,
@@ -51,26 +51,30 @@ public final class Maps {
     public static Double reqDouble(Map<String, Object> map, String key, String file, String loc,
             List<ContentError> errors) {
         Object v = map.get(key);
-        if (v instanceof Number n) {
+        if (v instanceof Number n && Double.isFinite(n.doubleValue())) {
             return n.doubleValue();
         }
-        errors.add(new ContentError(file, loc + "." + key, "expected number for '" + key + "'"));
+        errors.add(new ContentError(file, loc + "." + key, "expected finite number for '" + key + "'"));
         return null;
     }
 
-    public static double optDouble(Map<String, Object> map, String key, double def) {
-        Object v = map.get(key);
-        return v instanceof Number n ? n.doubleValue() : def;
+    public static double optDouble(Map<String, Object> map, String key, double def,
+            String file, String loc, List<ContentError> errors) {
+        if (!map.containsKey(key)) {
+            return def;
+        }
+        Double value = reqDouble(map, key, file, loc, errors);
+        return value == null ? def : value;
     }
 
-    public static int optInt(Map<String, Object> map, String key, int def) {
-        Object v = map.get(key);
-        return v instanceof Integer i ? i : def;
+    public static int optInt(Map<String, Object> map, String key, int def,
+            String file, String loc, List<ContentError> errors) {
+        return optional(map, key, Integer.class, def, file, loc, errors, "int");
     }
 
-    public static boolean optBool(Map<String, Object> map, String key, boolean def) {
-        Object v = map.get(key);
-        return v instanceof Boolean b ? b : def;
+    public static boolean optBool(Map<String, Object> map, String key, boolean def,
+            String file, String loc, List<ContentError> errors) {
+        return optional(map, key, Boolean.class, def, file, loc, errors, "boolean");
     }
 
     @SuppressWarnings("unchecked")
@@ -85,12 +89,9 @@ public final class Maps {
     }
 
     @SuppressWarnings("unchecked")
-    public static Map<String, Object> optMap(Map<String, Object> map, String key) {
-        Object v = map.get(key);
-        if (v instanceof Map<?, ?> m) {
-            return (Map<String, Object>) m;
-        }
-        return Map.of();
+    public static Map<String, Object> optMap(Map<String, Object> map, String key,
+            String file, String loc, List<ContentError> errors) {
+        return optional(map, key, Map.class, Map.of(), file, loc, errors, "mapping");
     }
 
     public static List<Object> reqList(Map<String, Object> map, String key, String file, String loc,
@@ -103,12 +104,24 @@ public final class Maps {
         return null;
     }
 
-    public static List<Object> optList(Map<String, Object> map, String key) {
-        Object v = map.get(key);
-        if (v instanceof List<?> l) {
-            return new ArrayList<>((List<Object>) l);
+    @SuppressWarnings("unchecked")
+    public static List<Object> optList(Map<String, Object> map, String key,
+            String file, String loc, List<ContentError> errors) {
+        return new ArrayList<>(optional(map, key, List.class, List.of(), file, loc, errors, "list"));
+    }
+
+    /** Only absence selects a default silently; explicit null is a type error. */
+    private static <T> T optional(Map<String, Object> map, String key, Class<T> type, T def,
+            String file, String loc, List<ContentError> errors, String expected) {
+        if (!map.containsKey(key)) {
+            return def;
         }
-        return List.of();
+        Object value = map.get(key);
+        if (type.isInstance(value)) {
+            return type.cast(value);
+        }
+        errors.add(new ContentError(file, loc + "." + key, "expected " + expected + " for '" + key + "'"));
+        return def;
     }
 
     public static List<String> strList(List<Object> list, String file, String loc, List<ContentError> errors) {

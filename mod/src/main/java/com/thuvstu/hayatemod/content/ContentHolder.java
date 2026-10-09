@@ -5,68 +5,82 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
 
-import com.thuvstu.hayatemod.core.content.ContentPack;
-import com.thuvstu.hayatemod.core.content.ContentError;
+import com.thuvstu.hayatemod.core.content.ContentRepository;
 import com.thuvstu.hayatemod.core.content.ContentSet;
+import net.fabricmc.loader.api.FabricLoader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/**
- * Loads the Content Pack for the game. Dev runs read {@code ./content} (or
- * {@code ../content} when the working directory is {@code run/}).
- * Packaged-jar loading from classpath resources is a later task (see ADR-08).
- */
+/** Game-side source selection and logging; validation/publication live in pure Java core. */
 public final class ContentHolder {
     private static final Logger LOGGER = LoggerFactory.getLogger("hayatemod/content");
-
-    private static ContentSet set;
-    private static List<ContentError> errors = List.of();
-    private static Path source;
+    private static final ContentRepository REPOSITORY = new ContentRepository();
 
     private ContentHolder() {
     }
 
-    public static void load() {
+    /** Returns true only when a new candidate passed every gate and was published. */
+    public static boolean load() {
         Path dir = findContentDir();
-        source = dir;
         if (dir == null) {
-            LOGGER.error("[content] no content directory found (tried ./content, ../content)");
-            return;
+            LOGGER.error("[content] no content source found; keeping previous dataset");
+            return false;
         }
-        ContentPack.LoadedPack pack = ContentPack.load(dir);
-        errors = pack.errors();
-        if (!pack.ok()) {
-            for (var e : errors) {
-                LOGGER.error("[content] {}", e);
+        var result = REPOSITORY.reload(dir);
+        for (var error : result.loaderErrors()) {
+            LOGGER.error("[content] {}", error);
+        }
+        for (var issue : result.issues()) {
+            switch (issue.severity()) {
+                case ERROR -> LOGGER.error("[content] {}", issue);
+                case WARNING -> LOGGER.warn("[content] {}", issue);
+                case INFO -> LOGGER.info("[content] {}", issue);
             }
-            LOGGER.error("[content] keeping previous dataset ({} errors)", errors.size());
-            return;
         }
-        set = pack.set();
+        if (!result.ok()) {
+            LOGGER.error("[content] rejected {}; keeping previous dataset", dir);
+            return false;
+        }
+        ContentSet set = result.set();
         LOGGER.info("[content] loaded from {}: weapons={} skills={} enemies={} encounters={} npcs={}",
                 dir, set.weapons().size(), set.skills().size(), set.enemies().size(),
                 set.encounters().size(), set.npcs().size());
+        return true;
     }
 
     public static ContentSet get() {
-        return set;
+        var snapshot = REPOSITORY.current();
+        return snapshot == null ? null : snapshot.set();
     }
 
     public static boolean ready() {
-        return set != null;
+        return REPOSITORY.current() != null;
     }
 
+    /** Source of the active dataset, not the most recently attempted candidate. */
     public static Path source() {
-        return source;
+        var snapshot = REPOSITORY.current();
+        return snapshot == null ? null : snapshot.source();
     }
 
     private static Path findContentDir() {
-        for (String candidate : List.of("content", "../content")) {
-            Path p = Paths.get(candidate);
-            if (Files.isDirectory(p) && Files.isRegularFile(p.resolve("vocabulary/core.yaml"))) {
-                return p.toAbsolutePath().normalize();
+        var loader = FabricLoader.getInstance();
+        Path override = loader.getConfigDir().resolve("hayatemod/content");
+        // An explicit override is a complete pack, never a partial merge. If broken,
+        // reject it rather than silently falling back to a different dataset.
+        if (Files.exists(override)) {
+            return override;
+        }
+        if (loader.isDevelopmentEnvironment()) {
+            for (String candidate : List.of("content", "../content")) {
+                Path p = Paths.get(candidate);
+                if (Files.isDirectory(p)) {
+                    return p;
+                }
             }
         }
-        return null;
+        // Fabric owns the JAR filesystem; do not close it after reading.
+        return loader.getModContainer("hayatemod")
+                .flatMap(container -> container.findPath("content")).orElse(null);
     }
 }

@@ -10,6 +10,10 @@ import java.util.UUID;
 import com.thuvstu.hayatemod.build.PlayerBuilds;
 import com.thuvstu.hayatemod.content.ContentHolder;
 import com.thuvstu.hayatemod.core.content.model.Models.EnemyData;
+import com.thuvstu.hayatemod.core.content.model.Models.WeaponCard;
+import com.thuvstu.hayatemod.core.build.WeaponSkillMerger;
+import com.thuvstu.hayatemod.core.engine.DamageScope;
+import com.thuvstu.hayatemod.core.engine.WeakIdentitySet;
 import com.thuvstu.hayatemod.core.engine.CastContext;
 import com.thuvstu.hayatemod.core.engine.EffectEngine;
 import com.thuvstu.hayatemod.core.engine.Vec3;
@@ -48,7 +52,8 @@ public final class McAdapter implements WorldAdapter {
     private static MinecraftServer server;
     private static EffectEngine engine;
     private static McAdapter instance;
-    private static boolean applyingEngineDamage;
+    private static final DamageScope DAMAGE_SCOPE = new DamageScope();
+    private static final WeakIdentitySet<LivingEntity> DEATH_HANDLED = new WeakIdentitySet<>();
     private static final Map<UUID, UUID> BOLT_OWNERS = new HashMap<>();
     private static final Map<String, EntityType<? extends Mob>> SPECIES = Map.of(
             "husk", EntityType.HUSK,
@@ -63,6 +68,7 @@ public final class McAdapter implements WorldAdapter {
         server = srv;
         instance = new McAdapter();
         engine = new EffectEngine(ContentHolder.get(), instance);
+        DEATH_HANDLED.clear();
         engine.setEventListener(msg -> LOGGER.info("[RPG][FX] {}", msg));
     }
 
@@ -79,9 +85,31 @@ public final class McAdapter implements WorldAdapter {
         ServerLivingEntityEvents.AFTER_DEATH.register(McAdapter::onAfterDeath);
         net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents.JOIN.register(
                 (handler, sender, srv) -> onJoin(handler.getPlayer()));
+        net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents.DISCONNECT.register((handler, srv) -> {
+            if (engine != null) {
+                engine.clearShield(handler.getPlayer().getUUID());
+            }
+        });
         ServerTickEvents.END_SERVER_TICK.register(s -> {
             if (engine != null) {
+                // Validate before completing due casts, not after firing from an unequipped weapon.
+                for (ServerPlayer player : s.getPlayerList().getPlayers()) {
+                    String casting = engine.castingWeapon(player.getUUID());
+                    if (!casting.isEmpty()) {
+                        var held = WeaponStack.resolve(player.getMainHandItem());
+                        if (!player.isAlive() || player.isSpectator() || held == null || !casting.equals(held.id())) {
+                            engine.cancelCast(player.getUUID());
+                        } else {
+                            DifficultyState.markCombat(player);
+                        }
+                    }
+                }
                 engine.tick();
+                if (s.getTickCount() % 5 == 0) {
+                    for (ServerPlayer player : s.getPlayerList().getPlayers()) {
+                        com.thuvstu.hayatemod.net.UiServer.sendCombatState(player);
+                    }
+                }
             }
             pruneBoltOwners();
             fireTimers(s);
@@ -233,7 +261,10 @@ public final class McAdapter implements WorldAdapter {
         }
         entity.addTag("solommo_wild_scaled");
         var tuning = ContentHolder.ready() ? ContentHolder.get().tuning() : null;
-        double mult = tuning != null ? tuning.wildHpMult() : 2.0;
+        var rules = DifficultyState.resolveWild(entity.getType().getDescriptionId()
+                .substring(entity.getType().getDescriptionId().lastIndexOf('.') + 1));
+        DifficultyState.bind(entity, rules);
+        double mult = (tuning != null ? tuning.wildHpMult() : 2.0) * rules.hp();
         var attr = entity.getAttribute(Attributes.MAX_HEALTH);
         if (attr != null) {
             attr.setBaseValue(attr.getBaseValue() * mult);
@@ -241,8 +272,12 @@ public final class McAdapter implements WorldAdapter {
     }
 
     private static boolean onAllowDamage(LivingEntity entity, DamageSource source, float amount) {
-        if (applyingEngineDamage) {
-            return true;
+        if (amount > 0) {
+            if (entity instanceof ServerPlayer player) DifficultyState.markCombat(player);
+            if (source.getEntity() instanceof ServerPlayer player) DifficultyState.markCombat(player);
+        }
+        if (DAMAGE_SCOPE.appliesTo(entity.getUUID())) {
+            return finishIncomingDamage(entity, source, amount, DAMAGE_SCOPE.currentFor(entity.getUUID()));
         }
         if (entity.getTags().contains("solommo_boss")) {
             LOGGER.info("[RPG][BOSS-HIT] src={} amount={} hp-before={}", source.getMsgId(), amount,
@@ -266,32 +301,43 @@ public final class McAdapter implements WorldAdapter {
             }
         }
         if (attacker instanceof LivingEntity mob && !(attacker instanceof ServerPlayer)
-                && entity instanceof ServerPlayer victim && engine != null
-                && !mob.getTags().contains("solommo_session")) {
-            var tuning = ContentHolder.ready() ? ContentHolder.get().tuning() : null;
-            double mult = tuning != null ? tuning.wildDamageMult() : 1.5;
-            if (WILD_HOSTILES.contains(mob.getType().getDescriptionId()) && mult != 1.0) {
-                applyingEngineDamage = true;
-                try {
-                    ServerLevel level = levelOf(entity);
-                    entity.hurtServer(level, source, amount * (float) mult);
-                } finally {
-                    applyingEngineDamage = false;
-                }
+                && !mob.getTags().contains("solommo_summoned")) {
+            double mult = DifficultyState.snapshot(mob).dps();
+            if (entity instanceof ServerPlayer && !mob.getTags().contains("solommo_session")
+                    && WILD_HOSTILES.contains(mob.getType().getDescriptionId())) {
+                var tuning = ContentHolder.ready() ? ContentHolder.get().tuning() : null;
+                mult *= tuning != null ? tuning.wildDamageMult() : 1.5;
+            }
+            if (mult != 1.0) {
+                float scaled = amount * (float) mult;
+                DAMAGE_SCOPE.run(entity.getUUID(), null, () -> entity.hurtServer(levelOf(entity), source, scaled));
                 return false;
             }
         }
+        return finishIncomingDamage(entity, source, amount, null);
+    }
+
+    private static WeaponCard passiveCard(ServerPlayer player) {
+        var card = WeaponStack.resolve(player.getMainHandItem());
+        return card == null ? null : WeaponSkillMerger.withPassiveRunes(card, PlayerBuilds.runeEffects(player));
+    }
+
+    private static boolean finishIncomingDamage(LivingEntity entity, DamageSource source, float amount, CastContext cause) {
+        if (amount <= 0) return true;
         if (entity instanceof ServerPlayer victim && engine != null) {
-            var card = WeaponStack.resolve(victim.getMainHandItem());
-            if (card != null && EffectEngine.hasTrigger(card, "on_damaged")
-                    && RpgHealth.get(victim.getUUID()) - amount > 0) {
+            var card = passiveCard(victim);
+            double effective = engine.damageAfterShield(victim.getUUID(), amount);
+            if (card != null && effective > 0 && EffectEngine.hasTrigger(card, "on_damaged")
+                    && RpgHealth.get(victim.getUUID()) - effective > 0) {
                 Entity src = source.getEntity();
                 engine.onDamaged(card, victim.getUUID(),
-                        src != null ? src.getUUID() : victim.getUUID());
+                        cause != null ? cause.owner() : src != null ? src.getUUID() : victim.getUUID(),
+                        PlayerBuilds.mods(victim.getUUID()), cause);
             }
         }
+        if (entity instanceof ServerPlayer && !entity.isAlive()) return false;
         if (entity instanceof ServerPlayer victim && engine != null
-                && RpgHealth.get(victim.getUUID()) - amount <= 0 && trySecondWind(victim)) {
+                && RpgHealth.get(victim.getUUID()) - engine.damageAfterShield(victim.getUUID(), amount) <= 0 && trySecondWind(victim)) {
             return false;
         }
         return true;
@@ -325,30 +371,27 @@ public final class McAdapter implements WorldAdapter {
     }
 
     private static void onAfterDeath(LivingEntity entity, DamageSource source) {
-        if (engine == null || entity.level().isClientSide()) {
-            return;
-        }
-        ServerPlayer attacker = resolveKiller(source);
-        if (attacker == null) {
-            return;
-        }
-        var card = WeaponStack.resolve(attacker.getMainHandItem());
-        if (card == null) {
-            return;
-        }
-        engine.onKill(card, attacker.getUUID(), entity.getUUID(),
-                PlayerBuilds.mods(attacker.getUUID()));
-        if (entity.getTags().contains("solommo_enemy:solommo:pyre_watcher")) {
-            com.thuvstu.hayatemod.progress.AdvancementHelper.grant(attacker, "watcher_down");
-            PlayerBuilds.grantSp(attacker.getUUID(), 1);
-            attacker.sendSystemMessage(Component.literal("[solommo] スキルポイント+1"), true);
-        }
-        if (entity instanceof ServerPlayer victim) {
-            var held = WeaponStack.resolve(victim.getMainHandItem());
-            if (held != null && EffectEngine.hasTrigger(held, "on_death")) {
-                engine.onDeath(held, victim.getUUID(), attacker.getUUID(),
-                        PlayerBuilds.mods(victim.getUUID()));
+        if (engine == null || entity.level().isClientSide() || !DEATH_HANDLED.add(entity)) return;
+        CastContext cause = DAMAGE_SCOPE.currentFor(entity.getUUID());
+        ServerPlayer attacker = cause != null && findStatic(cause.owner()) instanceof ServerPlayer p ? p : resolveKiller(source);
+        var held = entity instanceof ServerPlayer victim ? passiveCard(victim) : null;
+        if (entity instanceof ServerPlayer) engine.clearShield(entity.getUUID());
+        // Preserve kill-before-death ordering, but environmental/non-player kills must not suppress on_death.
+        if (attacker != null) {
+            var card = cause != null && cause.snapshot() != null ? cause.snapshot() : passiveCard(attacker);
+            if (card != null) {
+                engine.onKill(card, attacker.getUUID(), entity.getUUID(),
+                        cause != null ? cause.mods() : PlayerBuilds.mods(attacker.getUUID()), cause);
             }
+            if (entity.getTags().contains("solommo_enemy:solommo:pyre_watcher")) {
+                com.thuvstu.hayatemod.progress.AdvancementHelper.grant(attacker, "watcher_down");
+                PlayerBuilds.grantSp(attacker.getUUID(), 1);
+                attacker.sendSystemMessage(Component.literal("[solommo] スキルポイント+1"), true);
+            }
+        }
+        if (entity instanceof ServerPlayer victim && held != null) {
+            UUID killer = cause != null ? cause.owner() : source.getEntity() != null ? source.getEntity().getUUID() : victim.getUUID();
+            engine.onDeath(held, victim.getUUID(), killer, PlayerBuilds.mods(victim.getUUID()), cause);
         }
     }
 
@@ -427,6 +470,11 @@ public final class McAdapter implements WorldAdapter {
 
     @Override
     public void dealDamage(UUID attacker, UUID target, double amount, DamageKind kind, UUID direct) {
+        dealDamage(attacker, target, amount, kind, direct, DAMAGE_SCOPE.current());
+    }
+
+    @Override
+    public void dealDamage(UUID attacker, UUID target, double amount, DamageKind kind, UUID direct, CastContext context) {
         Entity a = find(attacker);
         Entity t = find(target);
         if (!(t instanceof LivingEntity victim)) {
@@ -443,12 +491,8 @@ public final class McAdapter implements WorldAdapter {
         } else {
             src = level.damageSources().generic();
         }
-        applyingEngineDamage = true;
-        try {
-            victim.hurtServer(level, src, (float) amount);
-        } finally {
-            applyingEngineDamage = false;
-        }
+        double scaled = a != null && !(a instanceof Player) ? amount * DifficultyState.snapshot(a).dps() : amount;
+        DAMAGE_SCOPE.run(target, context, () -> victim.hurtServer(level, src, (float) scaled));
     }
 
     @Override
@@ -489,8 +533,10 @@ public final class McAdapter implements WorldAdapter {
         }
         var tuning = ContentHolder.get().tuning();
         var ref = ContentHolder.get().reference();
+        var rules = summoned ? com.thuvstu.hayatemod.core.rules.RuleResolver.Multipliers.identity()
+                : DifficultyState.resolve(data);
         EnemyStats.DerivedStats stats = EnemyStats.derive(data.level(), data.rank(), ref,
-                tuning != null ? tuning.rankTargets() : Map.of(), 1.0, 1.0);
+                tuning != null ? tuning.rankTargets() : Map.of(), rules.hp(), rules.dps());
         EntityType<? extends Mob> type = SPECIES.getOrDefault(data.species(), EntityType.ZOMBIE);
         Mob mob = spawnTyped(type, level, m -> {
             Objects.requireNonNull(m.getAttribute(Attributes.MAX_HEALTH))
@@ -503,6 +549,7 @@ public final class McAdapter implements WorldAdapter {
                 m.addTag("solommo_session");
             }
             m.addTag("solommo_enemy:" + enemyId);
+            DifficultyState.bind(m, rules);
             if (summoned) {
                 m.addTag("solommo_summoned");
             }
@@ -929,6 +976,11 @@ public final class McAdapter implements WorldAdapter {
     }
 
     @Override
+    public void strikeLightning(UUID owner, UUID target, double damage, CastContext context) {
+        DAMAGE_SCOPE.run(target, context, () -> strikeLightning(owner, target, damage));
+    }
+
+    @Override
     public void strikeLightning(UUID owner, UUID target, double damage) {
         Entity t = find(target);
         if (t == null) {
@@ -945,22 +997,32 @@ public final class McAdapter implements WorldAdapter {
     }
 
     @Override
+    public void explode(UUID owner, Vec3 pos, double power, CastContext context) {
+        DAMAGE_SCOPE.run(null, context, () -> explode(owner, pos, power));
+    }
+
+    @Override
     public void explode(UUID owner, Vec3 pos, double power) {
         if (server == null) {
             return;
         }
-        ServerLevel level = server.overworld();
-        double clamped = Math.min(4.0, Math.max(1.0, power));
-        // Visual + knockback only; block damage is never allowed.
-        level.explode(null, pos.x(), pos.y(), pos.z(), (float) clamped, false,
-                net.minecraft.world.level.Level.ExplosionInteraction.NONE);
         Entity ownerEntity = find(owner);
+        if (ownerEntity == null) return;
+        ServerLevel level = levelOf(ownerEntity);
+        double clamped = Math.min(4.0, Math.max(1.0, power));
+        // Never call vanilla explode here: it also deals unattributed damage, duplicating our hits.
+        level.sendParticles(ParticleTypes.EXPLOSION, pos.x(), pos.y(), pos.z(), 1, 0, 0, 0, 0);
+        level.playSound(null, BlockPos.containing(pos.x(), pos.y(), pos.z()),
+                net.minecraft.sounds.SoundEvents.GENERIC_EXPLODE.value(), net.minecraft.sounds.SoundSource.PLAYERS, 1.0F, 1.0F);
         for (LivingEntity e : level.getEntities(EntityTypeTest.forClass(LivingEntity.class),
                 e -> e.isAlive() && !e.getUUID().equals(owner)
                         && !(e instanceof ServerPlayer p
-                                && (p.isCreative() || p.isSpectator())))) {
+                                && (p.isCreative() || p.isSpectator()))).stream()
+                        .sorted(java.util.Comparator.comparing(Entity::getUUID)).toList()) {
             if (e.position().distanceTo(
                     new net.minecraft.world.phys.Vec3(pos.x(), pos.y(), pos.z())) <= clamped * 2.0) {
+                var away = e.position().subtract(pos.x(), pos.y(), pos.z()).normalize().scale(clamped * .4);
+                launch(e.getUUID(), new Vec3(away.x, .2, away.z));
                 dealDamage(owner, e.getUUID(), clamped * 2.0, DamageKind.MELEE, null);
             }
         }

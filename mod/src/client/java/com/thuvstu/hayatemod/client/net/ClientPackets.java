@@ -29,6 +29,12 @@ public final class ClientPackets {
         ClientPlayNetworking.registerGlobalReceiver(UiPayloads.SkillState.TYPE, (payload, ctx) -> {
             ctx.client().execute(() -> HudState.skill(payload));
         });
+        ClientPlayNetworking.registerGlobalReceiver(UiPayloads.CastingState.TYPE, (payload, ctx) -> {
+            ctx.client().execute(() -> HudState.casting(payload));
+        });
+        ClientPlayNetworking.registerGlobalReceiver(UiPayloads.CombatState.TYPE, (payload, ctx) -> {
+            ctx.client().execute(() -> HudState.combat(payload));
+        });
         ClientPlayNetworking.registerGlobalReceiver(UiPayloads.PartyState.TYPE, (payload, ctx) -> {
             var members = new ArrayList<>(payload.members());
             float frac = payload.playerFrac();
