@@ -15,6 +15,7 @@ on:
       - 'v*'
     paths-ignore:
       - 'ci-out/**'
+      - 'ci-log.txt'
       - '**/*.md'
   pull_request:
 
@@ -79,7 +80,8 @@ jobs:
           set +e
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -f ci-out
+          cp ci-out/build-log.txt ci-log.txt
+          git add -f ci-log.txt
           if git diff --cached --quiet; then
             echo "no log changes"
             exit 0
