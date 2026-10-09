@@ -218,66 +218,26 @@ jobs:
           echo "--- done ---"
           ls -la
 
-      - name: emit worldgen api as annotations
+      - name: emit item and equipment api as annotations
         run: |
           set +e
           cd ci-out
           for C in \
-            net.minecraft.world.level.levelgen.feature.Feature \
-            net.minecraft.world.level.levelgen.feature.OreFeature \
-            net.minecraft.world.level.levelgen.feature.BlockReplacement \
-            net.minecraft.world.level.levelgen.placement.PlacedFeature ; do
-            OUT=$(javap -cp client.jar "$C" 2>&1 | tr '\n' '~' | tr -s ' ' | head -c 2200)
+            net.minecraft.world.item.SwordItem \
+            net.minecraft.world.item.Tier \
+            net.minecraft.world.item.ToolMaterial \
+            net.minecraft.world.item.equipment.ArmorMaterial \
+            net.minecraft.world.item.equipment.EquipmentAssets \
+            net.minecraft.world.item.component.Equippable \
+            net.minecraft.world.item.component.Fuel \
+            net.minecraft.world.item.component.UseCooldown ; do
+            OUT=$(javap -cp client.jar "$C" 2>&1 | tr '\n' '~' | tr -s ' ' | head -c 2000)
             echo "::notice title=javap:$C::$OUT"
           done
-
-      - name: emit vanilla worldgen data as annotations
-        run: |
-          set +e
-          cd ci-out
-          for F in \
-            data/minecraft/worldgen/feature/ore_coal.json \
-            data/minecraft/worldgen/placed_feature/ore_coal_lower.json \
-            data/minecraft/loot_table/blocks/iron_ore.json \
-            data/minecraft/loot_table/blocks/coal_ore.json ; do
-            OUT=$(unzip -p client.jar "$F" 2>&1 | tr -d '\n' | tr -s ' ' | head -c 2400)
-            echo "::notice title=data:$F::$OUT"
-          done
-
-      - name: emit vanilla enchantment data as annotations
-        run: |
-          set +e
-          cd ci-out
-          for F in \
-            data/minecraft/tags/block/mineable/pickaxe.json ; do
-          SMELT=$(unzip -l client.jar | awk '{print $4}' | grep -E '^data/minecraft/recipe/.*_from_smelting' | head -1)
-          BLAST=$(unzip -l client.jar | awk '{print $4}' | grep -E '^data/minecraft/recipe/.*_from_blasting' | head -1)
-          SHAPELESS=$(unzip -l client.jar | awk '{print $4}' | grep -E '^data/minecraft/recipe/.*shapeless' | head -1)
-          echo "::notice title=recipe:names::$SMELT $BLAST $SHAPELESS"
-          echo "::notice title=recipe:smelting::$(unzip -p client.jar "$SMELT" 2>&1 | tr -d '\n' | tr -s ' ' | head -c 1200)"
-          echo "::notice title=recipe:blasting::$(unzip -p client.jar "$BLAST" 2>&1 | tr -d '\n' | tr -s ' ' | head -c 1200)"
-          echo "::notice title=recipe:shapeless::$(unzip -p client.jar "$SHAPELESS" 2>&1 | tr -d '\n' | tr -s ' ' | head -c 1200)"
-            OUT=$(unzip -p client.jar "$F" 2>&1 | tr -d '\n' | tr -s ' ' | head -c 2400)
-            echo "::notice title=data:$F::$OUT"
-          done
-
-      - name: emit vanilla block models as annotations
-        run: |
-          set +e
-          cd ci-out
-          mkdir -p m && unzip -q -o client.jar 'assets/minecraft/models/*' -d m
-          echo "::notice title=model:block-parent::$(cat m/assets/minecraft/models/block/block.json 2>&1 | tr -d '\n' | tr -s ' ' | head -c 1600)"
-          echo "::notice title=model:lantern::$(cat m/assets/minecraft/models/block/lantern.json 2>&1 | tr -d '\n' | tr -s ' ' | head -c 1200)"
-          echo "::notice title=model:template-lantern::$(cat m/assets/minecraft/models/block/template_lantern.json 2>&1 | tr -d '\n' | tr -s ' ' | head -c 2400)"
-          echo "::notice title=model:light-emission::$(grep -rl light_emission m 2>/dev/null | head -6 | tr '\n' ' ' | head -c 900)"
-          echo "::notice title=model:end-rod::$(cat m/assets/minecraft/models/block/end_rod.json 2>&1 | tr -d '\n' | tr -s ' ' | head -c 1200)"
-
-      - name: list the vanilla data layout
-        run: |
-          set +e
-          cd ci-out
-          DIRS=$(unzip -l client.jar | awk '{print $4}' | grep -E '^data/minecraft/' | awk -F/ '{print $3}' | sort -u | tr '\n' ' ' | head -c 2000)
-          echo "::notice title=layout:data-dirs::$DIRS"
+          echo "::notice title=classes:equipment::$(unzip -l client.jar | awk '{print $4}' | grep -E '^net/minecraft/world/item/equipment/' | tr '\n' ' ' | head -c 2200)"
+          echo "::notice title=classes:components::$(unzip -l client.jar | awk '{print $4}' | grep -E '^net/minecraft/world/item/component/(Fuel|Use|Tool|Weapon|Equippable|Damage)' | tr '\n' ' ' | head -c 2200)"
+          echo "::notice title=data:equipment::$(unzip -l client.jar | awk '{print $4}' | grep -E '^data/minecraft/equipment/' | head -10 | tr '\n' ' ' | head -c 1200)"
+          echo "::notice title=data:enchantable::$(unzip -p client.jar data/minecraft/tags/item/enchantable/melee_weapon.json 2>&1 | tr -d '\n' | tr -s ' ' | head -c 1200)"
 
       - name: upload artifact
         uses: actions/upload-artifact@v7
