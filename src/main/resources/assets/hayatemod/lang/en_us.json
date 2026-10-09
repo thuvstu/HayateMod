@@ -1,4 +1,10 @@
 {
+	"item.hayatemod.gale_fan": "Gale Fan",
+	"itemTooltip.hayatemod.gale_fan": "Right-click: blows everything in front of you away",
+	"enchantment.hayatemod.gale_burst": "Gale Burst",
+	"enchantment.hayatemod.gale_burst.desc": "Hits knock targets back further.",
+	"enchantment.hayatemod.gale_drop": "Gale Landing",
+	"enchantment.hayatemod.gale_drop.desc": "Reduces fall damage.",
 	"creativeTab.hayatemod": "Hayate Mod",
 	"item.hayatemod.gale_dust": "Gale Dust",
 	"item.hayatemod.gale_ingot": "Gale Ingot",

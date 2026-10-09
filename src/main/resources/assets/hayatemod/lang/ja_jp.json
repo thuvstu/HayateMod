@@ -1,4 +1,10 @@
 {
+	"item.hayatemod.gale_fan": "疾風の扇",
+	"itemTooltip.hayatemod.gale_fan": "右クリック: 前方の mob を吹き飛ばす",
+	"enchantment.hayatemod.gale_burst": "疾風の爆風",
+	"enchantment.hayatemod.gale_burst.desc": "攻撃した対象を大きく吹き飛ばす。",
+	"enchantment.hayatemod.gale_drop": "疾風の着地",
+	"enchantment.hayatemod.gale_drop.desc": "落下ダメージを軽減する。",
 	"creativeTab.hayatemod": "Hayate Mod",
 	"item.hayatemod.gale_dust": "疾風の粉",
 	"item.hayatemod.gale_ingot": "疾風のインゴット",

@@ -100,6 +100,17 @@ public final class ModItems {
 					.durability(256)
 					.component(DataComponents.USE_COOLDOWN, new UseCooldown(1.5F)));
 
+	/**
+	 * Right-click to blow everything in front of you away. See {@link GaleFanItem}.
+	 *
+	 * <p>Note the {@code UseCooldown} component: it lives on the stack, so the item
+	 * greys out in the hotbar for three seconds after every gust.
+	 */
+	public static final Item GALE_FAN = register(ModItemIds.GALE_FAN, GaleFanItem::new,
+			new Item.Properties()
+					.durability(128)
+					.component(DataComponents.USE_COOLDOWN, new UseCooldown(3.0F)));
+
 	// --------------------------------------------- third batch: the gale armour
 
 	/**
@@ -152,6 +163,7 @@ public final class ModItems {
 				output.accept(ModItems.GALE_BLADE);
 				output.accept(ModItems.GALE_PICKAXE);
 				output.accept(ModItems.GALE_STAFF);
+				output.accept(ModItems.GALE_FAN);
 				output.accept(ModItems.GALE_HELMET);
 				output.accept(ModItems.GALE_CHESTPLATE);
 				output.accept(ModItems.GALE_LEGGINGS);

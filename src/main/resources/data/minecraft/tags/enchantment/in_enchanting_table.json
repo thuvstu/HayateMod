@@ -1,5 +1,7 @@
 {
-	"values": [
-		"hayatemod:gale_step"
-	]
+ "values": [
+  "hayatemod:gale_step",
+  "hayatemod:gale_burst",
+  "hayatemod:gale_drop"
+ ]
 }

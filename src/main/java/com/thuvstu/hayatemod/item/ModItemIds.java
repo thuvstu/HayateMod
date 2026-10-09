@@ -29,6 +29,9 @@ public final class ModItemIds {
 	public static final ResourceKey<Item> GALE_STAFF = create("gale_staff");
 	public static final ResourceKey<Item> GREATER_GALE_CHARM = create("greater_gale_charm");
 
+	// fourth batch: the gale fan
+	public static final ResourceKey<Item> GALE_FAN = create("gale_fan");
+
 	// third batch: the gale armour set
 	public static final ResourceKey<Item> GALE_HELMET = create("gale_helmet");
 	public static final ResourceKey<Item> GALE_CHESTPLATE = create("gale_chestplate");
