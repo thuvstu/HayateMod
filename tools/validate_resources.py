@@ -246,6 +246,36 @@ def check_data_references(item_ids: set[str], block_ids: set[str]) -> None:
 					fail(f"pickaxe tag is missing {block}")
 
 
+def png_size(path: pathlib.Path) -> tuple[int, int]:
+	data = path.read_bytes()
+	if data[:8] != b"\x89PNG\r\n\x1a\n":
+		fail(f"{path.name}: not a png")
+		return 0, 0
+	return int.from_bytes(data[16:20], "big"), int.from_bytes(data[20:24], "big")
+
+
+def check_animations() -> None:
+	"""Animations need a .mcmeta and a texture whose height is a frame multiple."""
+	for meta in sorted(RESOURCES.rglob("*.mcmeta")):
+		content = load_json(meta)
+		texture = pathlib.Path(str(meta)[: -len(".mcmeta")])
+		if not texture.exists():
+			fail(f"{meta.relative_to(RESOURCES)}: {texture.name} does not exist")
+			continue
+		width, height = png_size(texture)
+		if not width:
+			continue
+		if height % width:
+			fail(f"{texture.name}: height {height} is not a multiple of the frame width {width}")
+			continue
+		animation = (content or {}).get("animation", {})
+		frames = animation.get("frames")
+		if isinstance(frames, list):
+			for frame in frames:
+				if isinstance(frame, int) and frame >= height // width:
+					fail(f"{meta.name}: frame {frame} is outside the texture ({height // width} frames)")
+
+
 def main() -> int:
 	for path in all_json():
 		load_json(path)
@@ -255,6 +285,7 @@ def main() -> int:
 
 	check_blockstates(set())
 	check_item_definitions()
+	check_animations()
 
 	item_ids, block_ids = registered_ids()
 	check_translations(item_ids, block_ids)

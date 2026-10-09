@@ -13,6 +13,7 @@ The sprites are built from a couple of tiny primitives (mask -> fill -> shade
 -> outline) so every texture stays deterministic and diffable.
 """
 
+import json
 import math
 import pathlib
 import random
@@ -27,22 +28,37 @@ ASSETS = ROOT / "src" / "main" / "resources" / "assets" / "hayatemod"
 
 
 class Canvas:
-	def __init__(self, size: int):
-		self.size = size
-		self.pixels = [[(0, 0, 0, 0)] * size for _ in range(size)]
+	"""A width x height pixel buffer.
+
+	A canvas taller than it is wide is written as an animation strip: the game
+	plays it back frame by frame when a ``.mcmeta`` sits next to the png.
+	"""
+
+	def __init__(self, width: int, height: int | None = None):
+		self.width = width
+		self.height = height or width
+		self.pixels = [[(0, 0, 0, 0)] * self.width for _ in range(self.height)]
+
+	@property
+	def size(self) -> int:
+		return self.width
+
+	@property
+	def frames(self) -> int:
+		return max(1, self.height // self.width)
 
 	def set(self, x: int, y: int, colour) -> None:
-		if 0 <= x < self.size and 0 <= y < self.size:
+		if 0 <= x < self.width and 0 <= y < self.height:
 			self.pixels[y][x] = colour
 
 	def get(self, x: int, y: int):
-		if 0 <= x < self.size and 0 <= y < self.size:
+		if 0 <= x < self.width and 0 <= y < self.height:
 			return self.pixels[y][x]
 		return (0, 0, 0, 0)
 
 	def fill(self, colour) -> None:
-		for y in range(self.size):
-			for x in range(self.size):
+		for y in range(self.height):
+			for x in range(self.width):
 				self.pixels[y][x] = colour
 
 	def rect(self, x0: int, y0: int, x1: int, y1: int, colour) -> None:
@@ -57,14 +73,14 @@ class Canvas:
 		self.rect(x, y0, x, y1, colour)
 
 	def circle(self, cx: float, cy: float, r: float, colour) -> None:
-		for y in range(self.size):
-			for x in range(self.size):
+		for y in range(self.height):
+			for x in range(self.width):
 				if math.hypot(x + 0.5 - cx, y + 0.5 - cy) <= r:
 					self.set(x, y, colour)
 
 	def ring(self, cx: float, cy: float, r: float, width: float, colour) -> None:
-		for y in range(self.size):
-			for x in range(self.size):
+		for y in range(self.height):
+			for x in range(self.width):
 				d = math.hypot(x + 0.5 - cx, y + 0.5 - cy)
 				if r - width <= d <= r:
 					self.set(x, y, colour)
@@ -74,6 +90,13 @@ class Canvas:
 		for i in range(steps + 1):
 			t = i / steps if steps else 0
 			self.set(int(round(x0 + (x1 - x0) * t)), int(round(y0 + (y1 - y0) * t)), colour)
+
+	def blit(self, other: "Canvas", ox: int, oy: int) -> None:
+		for y in range(other.height):
+			for x in range(other.width):
+				r, g, b, a = other.pixels[y][x]
+				if a:
+					self.set(ox + x, oy + y, other.pixels[y][x])
 
 	def opaque(self, x: int, y: int) -> bool:
 		return self.get(x, y)[3] > 0
@@ -86,13 +109,13 @@ class Canvas:
 	def outline(self, colour) -> None:
 		"""Adds a one pixel outline around every drawn shape (alpha aware)."""
 		additions = []
-		for y in range(self.size):
-			for x in range(self.size):
+		for y in range(self.height):
+			for x in range(self.width):
 				if self.opaque(x, y):
 					continue
 				for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
 					nx, ny = x + dx, y + dy
-					if 0 <= nx < self.size and 0 <= ny < self.size and self.opaque(nx, ny):
+					if 0 <= nx < self.width and 0 <= ny < self.height and self.opaque(nx, ny):
 						additions.append((x, y))
 						break
 		for x, y in additions:
@@ -100,15 +123,15 @@ class Canvas:
 
 	def shade(self, condition, colour) -> None:
 		"""Re-colours every opaque pixel for which condition(x, y) is true."""
-		for y in range(self.size):
-			for x in range(self.size):
+		for y in range(self.height):
+			for x in range(self.width):
 				if self.opaque(x, y) and condition(x, y):
 					self.set(x, y, colour)
 
 	def speckle(self, colour, every: int, seed: int) -> None:
 		rng = random.Random(seed)
-		for y in range(self.size):
-			for x in range(self.size):
+		for y in range(self.height):
+			for x in range(self.width):
 				if rng.randrange(every) == 0:
 					self.set(x, y, colour)
 
@@ -138,7 +161,7 @@ class Canvas:
 			return out + struct.pack(">I", zlib.crc32(tag + data) & 0xFFFFFFFF)
 
 		png = b"\x89PNG\r\n\x1a\n"
-		png += chunk(b"IHDR", struct.pack(">IIBBBBB", self.size, self.size, 8, 6, 0, 0, 0))
+		png += chunk(b"IHDR", struct.pack(">IIBBBBB", self.width, self.height, 8, 6, 0, 0, 0))
 		png += chunk(b"IDAT", zlib.compress(bytes(raw), 9))
 		png += chunk(b"IEND", b"")
 
@@ -336,29 +359,37 @@ def lamp_frame() -> Canvas:
 	return c
 
 
-def lamp_core(lit: bool) -> Canvas:
-	"""The glowing core inside the cage."""
+def _core_frame(body, inner, edge, dots) -> Canvas:
 	c = Canvas(16)
-	if lit:
-		c.fill(CRYSTAL)
-		c.shade(lambda x, y: (x + y) % 5 == 0, PALE)
-		c.rect(6, 6, 9, 9, SHINE)
-		c.rect(7, 7, 8, 8, rgb("FFFFFF"))
-		c.hline(0, 15, 0, DEEP)
-		c.hline(0, 15, 15, DEEP)
-		c.vline(0, 0, 15, DEEP)
-		c.vline(15, 0, 15, DEEP)
-	else:
-		c.fill(rgb("3C5A63"))
-		c.shade(lambda x, y: (x + y) % 6 == 0, rgb("476C77"))
-		c.rect(6, 6, 9, 9, rgb("557B87"))
-		c.hline(0, 15, 0, rgb("22363C"))
-		c.hline(0, 15, 15, rgb("22363C"))
-		c.vline(0, 0, 15, rgb("22363C"))
-		c.vline(15, 0, 15, rgb("22363C"))
+	c.fill(body)
+	c.shade(lambda x, y: (x + y) % 5 == 0, inner)
+	c.rect(6, 6, 9, 9, inner)
+	c.rect(7, 7, 8, 8, SHINE)
+	c.hline(0, 15, 0, edge)
+	c.hline(0, 15, 15, edge)
+	c.vline(0, 0, 15, edge)
+	c.vline(15, 0, 15, edge)
 	for x, y in ((3, 3), (12, 3), (3, 12), (12, 12)):
-		c.set(x, y, mix(CRYSTAL, SHINE, 0.2) if lit else rgb("4A6670"))
+		c.set(x, y, dots)
 	return c
+
+
+def lamp_core(lit: bool) -> Canvas:
+	"""The core inside the cage - a three frame pulse when the lamp is lit."""
+	if not lit:
+		return _core_frame(rgb("3C5A63"), rgb("476C77"), rgb("22363C"), rgb("4A6670"))
+
+	strip = Canvas(16, 16 * 3)
+	phases = (0.0, 0.5, 1.0)
+	for index, phase in enumerate(phases):
+		frame = _core_frame(
+			mix(CRYSTAL, SHINE, 0.10 + phase * 0.55),
+			mix(PALE, SHINE, 0.15 + phase * 0.55),
+			DEEP,
+			mix(CRYSTAL, SHINE, 0.6),
+		)
+		strip.blit(frame, 0, index * 16)
+	return strip
 
 
 def ore(base, light, dark, speck: str, shadow: str) -> Canvas:
@@ -465,6 +496,12 @@ def main() -> None:
 	for path, canvas in targets().items():
 		canvas.write_png(path)
 		print("wrote", path.relative_to(ROOT))
+		if canvas.frames > 1:
+			meta = path.with_suffix(".png.mcmeta")
+			meta.write_text(json.dumps(
+				{"animation": {"frametime": 8, "frames": list(range(canvas.frames))}},
+				indent="\t") + "\n")
+			print("wrote", meta.relative_to(ROOT))
 
 
 if __name__ == "__main__":

@@ -79,13 +79,29 @@ src/main/resources/
     placed_feature/gale_ore.json  どこに置くか（個数・高さ範囲）
   data/hayatemod/enchantment/     エンチャント定義（データ駆動）
 tools/generate_textures.py        テクスチャ生成スクリプト（標準ライブラリのみ）
+tools/validate_resources.py       リソースの参照切れ・翻訳漏れチェック（CI でも実行）
 ```
 
-テクスチャはバイナリをコミットせずスクリプトで生成できます（編集後は再実行してください）。
+テクスチャはスクリプトで生成しています（編集したら再実行してください）。
 
 ```bash
-python3 tools/generate_textures.py
+python3 tools/generate_textures.py              # png を書き出す
+python3 tools/generate_textures.py --preview    # 端末に ascii プレビューを出す
+python3 tools/validate_resources.py             # モデル・データの参照切れを検査
 ```
+
+CI では「生成結果がコミット済みか」も見ているので、スクリプトを変えたら png の再生成を忘れずに。
+
+### 3D モデル
+
+| 対象 | モデル |
+| --- | --- |
+| `gale_block` | 全面立方体 + 中央の一段高いプレート（エレメント2個の段差付き） |
+| `gale_lamp` | くり抜いた枠（切り抜きテクスチャ）＋内側の発光コア。点灯時はコアに `light_emission: 15` |
+| `gale_charm` | 3D ペンダント。紐・留め金・宝石の3エレメントで、宝石は Y 軸 45° 回転させたダイヤ形 |
+
+アイテムモデルは `minecraft:block/block` を親にしています（`gui_light: side` と標準の
+`display` 変換を継承できるため）。
 
 ### ワールド生成の3点セット
 
