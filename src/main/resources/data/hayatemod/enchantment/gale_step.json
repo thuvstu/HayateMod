@@ -1,0 +1,35 @@
+{
+	"anvil_cost": 2,
+	"description": {
+		"translate": "enchantment.hayatemod.gale_step"
+	},
+	"effects": {
+		"minecraft:attributes": [
+			{
+				"amount": {
+					"type": "minecraft:linear",
+					"base": 0.04,
+					"per_level_above_first": 0.04
+				},
+				"attribute": "minecraft:movement_speed",
+				"id": "hayatemod:enchantment.gale_step",
+				"operation": "add_multiplied_total"
+			}
+		]
+	},
+	"max_cost": {
+		"base": 40,
+		"per_level_above_first": 12
+	},
+	"max_level": 3,
+	"min_cost": {
+		"base": 8,
+		"per_level_above_first": 12
+	},
+	"slots": [
+		"feet"
+	],
+	"supported_items": "#minecraft:enchantable/foot_armor",
+	"primary_items": "#minecraft:enchantable/foot_armor",
+	"weight": 4
+}

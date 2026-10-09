@@ -218,136 +218,43 @@ jobs:
           echo "--- done ---"
           ls -la
 
-      - name: emit vanilla signatures as annotations
-        # Job summaries and artifacts are not reachable from every environment,
-        # but check run annotations are exposed through the REST API. GitHub
-        # keeps at most 10 notice annotations per step, so the classes are
-        # announced in groups.
+      - name: emit worldgen api as annotations
         run: |
           set +e
           cd ci-out
-          emit() {
-            python3 - "$@" <<'PY'
-          import sys
-          for name in sys.argv[1:]:
-              print(f"::notice title=javap:{name}::{open('x.txt').read()[:0]}")
-          PY
-          }
-          for c in \
+          for C in \
             net.minecraft.world.level.levelgen.feature.Feature \
-            net.minecraft.world.level.levelgen.feature.ConfiguredFeature \
-            net.minecraft.world.level.levelgen.placement.PlacedFeature \
-            net.minecraft.core.registries.BuiltInRegistries ; do
-            text=$(javap -public -cp client.jar "$c" 2>&1 | tr '\n' '~' | tr -s ' ' | head -c 3000)
-            echo "::notice title=javap:$c::$text"
-          done
-          echo "::notice title=javap-fields-featuretype::$(javap -public -cp client.jar net.minecraft.core.registries.BuiltInRegistries 2>/dev/null | grep -iE 'FEATURE|PLACED|CONFIGURED' | tr '\n' '~' | head -c 3000)"
-
-      - name: emit placement signatures as annotations
-        run: |
-          set +e
-          cd ci-out
-          for c in \
-            net.minecraft.world.level.levelgen.placement.CountPlacement \
-            net.minecraft.world.level.levelgen.placement.InSquarePlacement \
-            net.minecraft.world.level.levelgen.placement.HeightRangePlacement \
-            net.minecraft.world.level.levelgen.placement.BiomeFilter \
-            net.minecraft.world.level.levelgen.HeightRange ; do
-            text=$(javap -public -cp client.jar "$c" 2>&1 | tr '\n' '~' | tr -s ' ' | head -c 3000)
-            echo "::notice title=javap:$c::$text"
-          done
-          echo "::notice title=classes:levelgen::$(grep -E '^net/minecraft/world/level/levelgen/(feature|placement)/[A-Za-z]+\.class$' client-classes.txt | tr '\n' ' ' | head -c 3000)"
-
-      - name: emit ore configuration signatures as annotations
-        run: |
-          set +e
-          cd ci-out
-          for c in \
-            net.minecraft.world.level.levelgen.feature.configurations.OreConfiguration \
             net.minecraft.world.level.levelgen.feature.OreFeature \
-            net.minecraft.world.level.levelgen.feature.FeatureType \
-            net.minecraft.world.level.block.state.properties.BlockStateProvider \
-            net.minecraft.tags.BlockTags \
-            net.minecraft.util.valueproviders.UniformInt \
-            net.minecraft.util.valueproviders.ConstantInt ; do
-            text=$(javap -public -cp client.jar "$c" 2>&1 | grep -vE '^  public final |^  public java.lang.String|^  public int hashCode|^  public boolean equals' | tr '\n' '~' | tr -s ' ' | head -c 3000)
-            echo "::notice title=javap:$c::$text"
-          done
-          echo "::notice title=classes:worldgen::$(grep -E '^net/minecraft/(worldgen|world/level/levelgen)/' client-classes.txt | grep -vE '\$' | head -c 3000 | tr '\n' ' ')"
-
-      - name: emit registry entries as annotations
-        run: |
-          set +e
-          cd ci-out
-          echo "::notice title=registries:feature::$(javap -public -cp client.jar net.minecraft.core.registries.Registries 2>&1 | grep -iE 'FEATURE|PLACED' | tr '\n' '~' | head -c 3000)"
-          echo "::notice title=builtin:feature::$(javap -public -cp client.jar net.minecraft.core.registries.BuiltInRegistries 2>&1 | grep -iE 'FEATURE' | tr '\n' '~' | head -c 3000)"
-          echo "::notice title=classes:ore::$(grep -iE 'ore|blockreplacement' client-classes.txt | tr '\n' ' ' | head -c 2500)"
-          echo "::notice title=classes:data-worldgen::$(grep -E '^net/minecraft/data/worldgen/' client-classes.txt | grep -vE '\$' | tr '\n' ' ' | head -c 2500)"
-          echo "::notice title=blocktags:ore::$(javap -public -cp client.jar net.minecraft.tags.BlockTags 2>&1 | grep -iE 'REPLACEABLE' | tr '\n' '~' | head -c 1200)"
-
-      - name: emit ore feature signatures as annotations
-        run: |
-          set +e
-          cd ci-out
-          for c in \
             net.minecraft.world.level.levelgen.feature.BlockReplacement \
-            net.minecraft.world.level.levelgen.structure.templatesystem.RuleTest \
-            net.minecraft.world.level.levelgen.structure.templatesystem.TagMatchTest \
-            net.minecraft.world.level.levelgen.heightproviders.BiasedToBottomHeight \
-            net.minecraft.world.level.levelgen.VerticalAnchor \
-            net.minecraft.world.level.levelgen.GenerationStep\$Decoration ; do
-            text=$(javap -public -cp client.jar "$c" 2>&1 | grep -vE '^  public final |^  public int hashCode|^  public boolean equals' | tr '\n' '~' | tr -s ' ' | head -c 2200)
-            echo "::notice title=javap:$c::$text"
+            net.minecraft.world.level.levelgen.placement.PlacedFeature ; do
+            OUT=$(javap -cp client.jar "$C" 2>&1 | tr '\n' '~' | tr -s ' ' | head -c 2200)
+            echo "::notice title=javap:$C::$OUT"
           done
 
-      - name: inspect the vanilla data pack (worldgen layout)
+      - name: emit vanilla worldgen data as annotations
         run: |
           set +e
           cd ci-out
-          echo "::notice title=datapack:worldgen-dirs::$(unzip -l client.jar | awk '{print $4}' | grep -E '^data/minecraft/worldgen/' | awk -F/ '{print $1"/"$2"/"$3"/"$4}' | sort -u | tr '\n' ' ' | head -c 2500)"
-          echo "::notice title=datapack:ore-files::$(unzip -l client.jar | awk '{print $4}' | grep -E '^data/minecraft/worldgen/(feature|placed_feature)/ore_' | tr '\n' ' ' | head -c 2500)"
-          echo "::notice title=datapack:ore-coal-feature::$(unzip -p client.jar data/minecraft/worldgen/feature/ore_coal.json 2>&1 | tr -d '\n' | tr -s ' ' | head -c 2500)"
-          echo "::notice title=datapack:ore-coal-placed::$(unzip -p client.jar data/minecraft/worldgen/placed_feature/ore_coal.json 2>&1 | tr -d '\n' | tr -s ' ' | head -c 2500)"
-          echo "::notice title=datapack:ore-nether-gold::$(unzip -p client.jar data/minecraft/worldgen/feature/ore_nether_gold.json 2>&1 | tr -d '\n' | tr -s ' ' | head -c 1500)"
+          for F in \
+            data/minecraft/worldgen/feature/ore_coal.json \
+            data/minecraft/worldgen/placed_feature/ore_coal_lower.json \
+            data/minecraft/loot_table/blocks/iron_ore.json \
+            data/minecraft/loot_table/blocks/coal_ore.json ; do
+            OUT=$(unzip -p client.jar "$F" 2>&1 | tr -d '\n' | tr -s ' ' | head -c 2400)
+            echo "::notice title=data:$F::$OUT"
+          done
 
-      - name: inspect the vanilla data pack (enchantments, tags)
+      - name: emit vanilla enchantment data as annotations
         run: |
           set +e
           cd ci-out
-          echo "::notice title=datapack:enchantment-dirs::$(unzip -l client.jar | awk '{print $4}' | grep -E '^data/minecraft/(enchantment|tags/enchantment)/' | head -40 | tr '\n' ' ' | head -c 2500)"
-          echo "::notice title=datapack:enchantment-sharpness::$(unzip -p client.jar data/minecraft/enchantment/sharpness.json 2>&1 | tr -d '\n' | tr -s ' ' | head -c 2500)"
-          echo "::notice title=datapack:enchantment-effects::$(unzip -l client.jar | awk '{print $4}' | grep -E '^data/minecraft/enchantment_effect/' | head -20 | tr '\n' ' ' | head -c 1500)"
-          echo "::notice title=datapack:tags-dir::$(unzip -l client.jar | awk '{print $4}' | grep -E '^data/minecraft/tags/' | awk -F/ '{print $4}' | sort -u | tr '\n' ' ' | head -c 1500)"
-
-      - name: dump placed feature and loot table json
-        run: |
-          set +e
-          cd ci-out
-          echo "::notice title=json:placed-ore-coal-lower::$(unzip -p client.jar data/minecraft/worldgen/placed_feature/ore_coal_lower.json 2>&1 | tr -d '\n' | tr -s ' ' | head -c 2500)"
-          echo "::notice title=json:placed-ore-iron::$(unzip -p client.jar data/minecraft/worldgen/placed_feature/ore_iron.json 2>&1 | tr -d '\n' | tr -s ' ' | head -c 2500)"
-          echo "::notice title=json:loot-iron-ore::$(unzip -p client.jar data/minecraft/loot_tables/blocks/iron_ore.json 2>&1 | tr -d '\n' | tr -s ' ' | head -c 2500)"
-          echo "::notice title=json:loot-coal-ore::$(unzip -p client.jar data/minecraft/loot_tables/blocks/coal_ore.json 2>&1 | tr -d '\n' | tr -s ' ' | head -c 2500)"
-          echo "::notice title=json:loot-deepslate-iron-ore::$(unzip -p client.jar data/minecraft/loot_tables/blocks/deepslate_iron_ore.json 2>&1 | tr -d '\n' | tr -s ' ' | head -c 2500)"
-
-      - name: dump enchantment json
-        run: |
-          set +e
-          cd ci-out
-          echo "::notice title=json:enchant-efficiency::$(unzip -p client.jar data/minecraft/enchantment/efficiency.json 2>&1 | tr -d '\n' | tr -s ' ' | head -c 2500)"
-          echo "::notice title=json:enchant-fortune::$(unzip -p client.jar data/minecraft/enchantment/fortune.json 2>&1 | tr -d '\n' | tr -s ' ' | head -c 2500)"
-          echo "::notice title=json:enchant-sweeping::$(unzip -p client.jar data/minecraft/enchantment/sweeping_edge.json 2>&1 | tr -d '\n' | tr -s ' ' | head -c 2000)"
-          echo "::notice title=json:enchant-tags::$(unzip -l client.jar | awk '{print $4}' | grep -E '^data/minecraft/tags/enchantment/' | head -20 | tr '\n' ' ' | head -c 1500)"
-          echo "::notice title=json:enchantable-tags::$(unzip -l client.jar | awk '{print $4}' | grep -E '^data/minecraft/tags/item/enchantable/' | head -20 | tr '\n' ' ' | head -c 1500)"
-
-      - name: locate loot tables and movement speed enchantments
-        run: |
-          set +e
-          cd ci-out
-          echo "::notice title=find:loot-paths::$(unzip -l client.jar | awk '{print $4}' | grep -i loot | head -25 | tr '\n' ' ' | head -c 2500)"
-          echo "::notice title=find:loot-block-ore::$(unzip -l client.jar | awk '{print $4}' | grep -iE 'loot.*ore' | head -10 | tr '\n' ' ' | head -c 1500)"
-          echo "::notice title=find:swift-sneak::$(unzip -p client.jar data/minecraft/enchantment/swift_sneak.json 2>&1 | tr -d '\n' | tr -s ' ' | head -c 2000)"
-          echo "::notice title=find:soul-speed::$(unzip -p client.jar data/minecraft/enchantment/soul_speed.json 2>&1 | tr -d '\n' | tr -s ' ' | head -c 2000)"
-          echo "::notice title=find:recipe-dirs::$(unzip -l client.jar | awk '{print $4}' | grep -E '^data/minecraft/recipe/' | head -5 | tr '\n' ' ' | head -c 1200)"
+          for F in \
+            data/minecraft/enchantment/swift_sneak.json \
+            data/minecraft/enchantment/soul_speed.json \
+            data/minecraft/tags/item/enchantable/foot_armor.json ; do
+            OUT=$(unzip -p client.jar "$F" 2>&1 | tr -d '\n' | tr -s ' ' | head -c 2400)
+            echo "::notice title=data:$F::$OUT"
+          done
 
       - name: upload artifact
         uses: actions/upload-artifact@v7

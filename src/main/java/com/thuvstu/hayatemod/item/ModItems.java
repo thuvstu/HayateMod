@@ -74,6 +74,8 @@ public final class ModItems {
 				// The tab builder also accepts blocks (via their BlockItem).
 				output.accept(ModBlocks.GALE_BLOCK);
 				output.accept(ModBlocks.GALE_LAMP);
+				output.accept(ModBlocks.GALE_ORE);
+				output.accept(ModBlocks.DEEPSLATE_GALE_ORE);
 			})
 			.build();
 

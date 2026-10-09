@@ -9,6 +9,7 @@ import net.fabricmc.api.ModInitializer;
 
 import com.thuvstu.hayatemod.block.ModBlocks;
 import com.thuvstu.hayatemod.item.ModItems;
+import com.thuvstu.hayatemod.worldgen.ModWorldgen;
 
 public class HayateMod implements ModInitializer {
 	public static final String MOD_ID = "hayatemod";
@@ -35,5 +36,6 @@ public class HayateMod implements ModInitializer {
 		// vanilla itself uses (see net.minecraft.world.item.Items).
 		ModItems.initialize();
 		ModBlocks.initialize();
+		ModWorldgen.initialize();
 	}
 }

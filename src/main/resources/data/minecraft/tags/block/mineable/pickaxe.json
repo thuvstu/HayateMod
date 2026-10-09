@@ -1,6 +1,8 @@
 {
 	"values": [
 		"hayatemod:gale_block",
-		"hayatemod:gale_lamp"
+		"hayatemod:gale_lamp",
+		"hayatemod:gale_ore",
+		"hayatemod:deepslate_gale_ore"
 	]
 }
