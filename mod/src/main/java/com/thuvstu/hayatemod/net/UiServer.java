@@ -46,8 +46,8 @@ public final class UiServer {
             double stock = MarketStore.stockOf(l.item());
             String name = displayName(l.item());
             rows.add(new MarketRow(l.item(), name,
-                    (int) Math.round(MarketSim.ask(book, l, stock)),
-                    (int) Math.round(MarketSim.bid(book, l, stock)),
+                    (int) Math.ceil(MarketSim.ask(book, l, stock)),
+                    (int) Math.floor(MarketSim.bid(book, l, stock + 1)),
                     (int) stock));
         }
         ServerPlayNetworking.send(player, new MarketOpen(rows));
@@ -120,6 +120,32 @@ public final class UiServer {
         }
         ServerPlayNetworking.send(player, new TavernOpen(npcs, 5, EncounterRunner.isActive(),
                 quests));
+    }
+
+    /** Periodic authoritative correction: kill-based CD reductions must reach the HUD too. */
+    public static void sendCombatState(ServerPlayer player) {
+        var engine = com.thuvstu.hayatemod.rpg.McAdapter.engine();
+        if (engine == null) {
+            return;
+        }
+        var card = WeaponStack.resolve(player.getMainHandItem());
+        var mods = PlayerBuilds.mods(player.getUUID());
+        var adapter = com.thuvstu.hayatemod.rpg.McAdapter.adapter();
+        ServerPlayNetworking.send(player, new UiPayloads.CombatState(
+                (float) engine.shieldAmount(player.getUUID()), (int) engine.shieldRemainingTicks(player.getUUID()),
+                card == null ? 0 : (int) engine.remainingCooldownTicks(player.getUUID(), card, "heavy", mods),
+                card == null || !card.skills().containsKey("heavy") ? 0 : (int) engine.cooldownTicks(card, "heavy", mods),
+                adapter == null ? 0 : (float) adapter.resourceLevel(player.getUUID(), "mana"),
+                adapter == null ? 0 : (float) adapter.resourceLevel(player.getUUID(), "stamina")));
+        ServerPlayNetworking.send(player, new UiPayloads.CastingState(engine.castingSlot(player.getUUID()),
+                (int) engine.castRemainingTicks(player.getUUID()), (int) engine.castTotalTicks(player.getUUID())));
+        if (card == null || !card.skills().containsKey("special")) {
+            sendSkill(player, "", "", 0, 0);
+            return;
+        }
+        sendSkill(player, card.name(), com.thuvstu.hayatemod.core.describe.Describer.describeSkill(card.skills().get("special")),
+                (int) engine.remainingCooldownTicks(player.getUUID(), card, "special", mods),
+                (int) engine.cooldownTicks(card, "special", mods));
     }
 
     public static void sendSkill(ServerPlayer player, String weaponName, String specialName,

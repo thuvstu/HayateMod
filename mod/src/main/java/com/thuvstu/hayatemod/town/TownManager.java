@@ -97,22 +97,27 @@ public final class TownManager {
 
     /** Returns true when the player may use town-gated operations. */
     public static boolean requireTown(ServerPlayer player) {
-        if (isInTown(player)) {
+        if (com.thuvstu.hayatemod.rpg.DifficultyState.canUseTown(player)) {
             return true;
         }
-        player.sendSystemMessage(Component.literal("[街] 街の範囲内で実行してください（/solommo town）"));
+        player.sendSystemMessage(Component.literal("[街] 街に戻り、戦闘終了から10秒待ってください（死亡・観戦・エンカウンター中は不可）"));
         return false;
     }
 
     public static boolean isInTown(ServerPlayer player) {
+        if (player.level() != player.level().getServer().overworld()) return false;
         Vec3 c = center();
         Vec3 p = player.position();
         double dx = p.x - c.x;
         double dz = p.z - c.z;
-        return dx * dx + dz * dz <= gateRadius() * gateRadius();
+        return Math.abs(p.y - c.y) <= 32 && dx * dx + dz * dz <= gateRadius() * gateRadius();
     }
 
     public static void teleportTown(ServerPlayer player) {
+        if (player.level() != player.level().getServer().overworld()) {
+            player.sendSystemMessage(Component.literal("[街] オーバーワールドへ戻ってから利用してください"));
+            return;
+        }
         ensureTown(player.level());
         RETURNS.put(player.getUUID(), player.position());
         Vec3 c = center();

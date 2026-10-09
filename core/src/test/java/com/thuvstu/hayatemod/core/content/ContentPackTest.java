@@ -12,7 +12,7 @@ class ContentPackTest {
     void repoContentLoadsWithoutErrors() {
         ContentPack.LoadedPack pack = ContentPack.load(com.thuvstu.hayatemod.core.TestContent.dir());
         assertTrue(pack.errors().isEmpty(), "loader errors: " + pack.errors());
-        assertEquals(13, pack.set().weapons().size());
+        assertEquals(16, pack.set().weapons().size());
         assertEquals(13, pack.set().skills().size());
         assertEquals(7, pack.set().enemies().size());
         assertEquals(6, pack.set().runes().size());

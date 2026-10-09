@@ -4,8 +4,11 @@
 # Gradle cache folder
 .gradle
 
-# Gradle build folder
-build
+# Gradle build folders (root + modules only; must not match *.build packages)
+/build/
+/core/build/
+/mod/build/
+/tools/build/
 
 # IntelliJ
 out/
@@ -17,6 +20,6 @@ out/
 # virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
 hs_err_pid*
 
-# Common working directories
-run
-run-server
+# Common working directories (dev servers)
+/run/
+/run-server/

@@ -1,0 +1,31 @@
+id: solommo:echo_reaver
+name: 残響の追撃剣
+family: sword
+rarity: unique
+item_level: 16
+tags_extra: [content:field_clear]
+role_hint: [dps]
+skills:
+  primary:
+    core: melee_thrust
+    mods: {element: fire, range: 3, width: 0.5}
+    effects:
+      - trigger: on_kill
+        actions:
+          - type: reduce_cooldown
+            ref: special
+            amount: 2
+        flags: {prevent_recursive: [], max_chain_depth: 0}
+  special:
+    core: projectile_single
+    mods: {element: fire, range: 24, cooldown: 8, resource: stamina, resource_cost: 15}
+    effects:
+      - trigger: on_hit
+        actions:
+          - type: strike
+            damage_mult: 0.5
+        flags: {prevent_recursive: [], max_chain_depth: 1}
+  heavy:
+    core: heavy_slam
+    mods: {element: fire, radius: 4, cooldown: 12, resource: stamina, resource_cost: 25}
+design_note: "Gの後に周囲の敵を倒して再使用を早める。短縮は残りCDだけに作用し、次回発動へ貯蓄しない。詠唱速度は変更しない。"

@@ -18,6 +18,12 @@ public class HayatemodClient implements ClientModInitializer {
         ClientPackets.register();
         SkillHud.register();
         PartyHud.register();
-        ClientTickEvents.END_CLIENT_TICK.register(client -> HudState.tickSkill());
+        ClientTickEvents.END_CLIENT_TICK.register(client -> {
+            if (client.player == null || client.level == null) {
+                HudState.clear();
+            } else {
+                HudState.tickSkill();
+            }
+        });
     }
 }

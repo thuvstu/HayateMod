@@ -56,6 +56,7 @@ public class Hayatemod implements ModInitializer {
         TownManager.register();
         TownTalk.register();
         ServerLifecycleEvents.SERVER_STARTED.register(server -> {
+            com.thuvstu.hayatemod.rpg.DifficultyState.load(server.getWorldPath(LevelResource.ROOT));
             if (ContentHolder.ready()) {
                 McAdapter.init(server);
             }

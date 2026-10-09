@@ -51,6 +51,9 @@ dependencies {
     // surface on the runtime classpath, and `include` bundles them into the mod jar.
     implementation project(':core')
     include "org.yaml:snakeyaml:2.3"
+
+    testImplementation "org.junit.jupiter:junit-jupiter:5.11.4"
+    testRuntimeOnly "org.junit.platform:junit-platform-launcher"
 }
 
 processResources {
@@ -88,4 +91,9 @@ publishing {
     }
     repositories {
     }
+}
+
+// Pure-Java adapter regressions (save envelopes); no game launch required.
+tasks.withType(Test).configureEach {
+    useJUnitPlatform()
 }

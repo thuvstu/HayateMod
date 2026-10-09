@@ -7,6 +7,8 @@ import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -17,6 +19,7 @@ import org.yaml.snakeyaml.Yaml;
 import org.yaml.snakeyaml.constructor.SafeConstructor;
 import org.yaml.snakeyaml.error.YAMLException;
 
+import com.thuvstu.hayatemod.core.content.model.Models.ExecutionLimits;
 import com.thuvstu.hayatemod.core.content.model.Models.AbilityDef;
 import com.thuvstu.hayatemod.core.content.model.Models.ArenaData;
 import com.thuvstu.hayatemod.core.content.model.Models.DamageTuning;
@@ -66,7 +69,7 @@ public final class ContentPack {
         List<ReferenceEntry> reference =
                 loadSingle(root, "balance/reference.yaml", errors, Parsers::reference);
         DamageTuning tuning = loadSingle(root, "balance/damage.yaml", errors, Parsers::damageTuning);
-        Map<String, Ruleset> rulesets = loadDir(root, "rulesets", errors, ContentPack::ruleset);
+        Map<String, Ruleset> rulesets = loadDir(root, "rulesets", errors, Parsers::ruleset);
         var market = loadSingle(root, "economy/market.yaml", errors, Parsers::market);
         var mining = loadSingle(root, "life_skills/mining.yaml", errors, Parsers::mining);
         var fishing = loadSingle(root, "life_skills/fishing.yaml", errors, Parsers::fishing);
@@ -76,7 +79,10 @@ public final class ContentPack {
         if (vocabulary == null) {
             errors.add(new ContentError("vocabulary/core.yaml", "<root>", "vocabulary is required"));
             vocabulary = new Vocabulary(Set.of(), Set.of(), Set.of(), Set.of(), Set.of(), Set.of(),
-                    Set.of(), Set.of(), 3, 8, 12.0);
+                    Set.of(), Set.of(), 3, 8, 12.0,
+                    ExecutionLimits.defaults(),
+                    com.thuvstu.hayatemod.core.content.model.Models.CombatLimits.defaults(),
+                    com.thuvstu.hayatemod.core.content.model.Models.CastingLimits.defaults());
         }
         ContentSet set = new ContentSet(weapons, enemies, encounters, skills, loot, jobs, npcs, arenas,
                 runes, keystones,
@@ -167,7 +173,7 @@ public final class ContentPack {
     }
 
     private static <T> T loadSingle(Path root, String rel, List<ContentError> errors, FileParser<T> parser) {
-        Path p = root.resolve(rel.replace('/', java.io.File.separatorChar));
+        Path p = root.resolve(rel);
         if (!Files.isRegularFile(p)) {
             errors.add(new ContentError(rel, "<root>", "required file is missing"));
             return null;
@@ -186,15 +192,8 @@ public final class ContentPack {
         if (id == null || name == null) {
             return null;
         }
-        return new ArenaData(id, name, Maps.optStr(m, "structure", ""), Maps.optMap(m, "markers"));
-    }
-
-    private static Ruleset ruleset(Map<String, Object> m, String file, List<ContentError> errors) {
-        String id = Maps.reqStr(m, "id", file, "<root>", errors);
-        if (id == null) {
-            return null;
-        }
-        return new Ruleset(id, Maps.optBool(m, "extends_global", true));
+        return new ArenaData(id, name, Maps.optStr(m, "structure", "", file, "<root>", errors),
+                Maps.optMap(m, "markers", file, "<root>", errors));
     }
 
     private static String idOf(Map<String, Object> map, String file, List<ContentError> errors) {
@@ -235,13 +234,48 @@ public final class ContentPack {
             errors.add(new ContentError(rel, "<root>", "expected a YAML mapping at document root"));
             return null;
         }
-        for (Object key : map.keySet()) {
-            if (!(key instanceof String)) {
-                errors.add(new ContentError(rel, "<root>", "non-string key in mapping"));
-                return null;
-            }
+        int before = errors.size();
+        checkTree(map, rel, "<root>", errors,
+                Collections.newSetFromMap(new IdentityHashMap<>()),
+                Collections.newSetFromMap(new IdentityHashMap<>()));
+        if (errors.size() != before) {
+            return null;
         }
         return (Map<String, Object>) map;
+    }
+
+    /** Validate nested keys too, before parsers cast maps to Map<String, Object>. */
+    private static void checkTree(Object value, String file, String loc, List<ContentError> errors,
+            Set<Object> active, Set<Object> visited) {
+        if (value instanceof Number number && !Double.isFinite(number.doubleValue())) {
+            errors.add(new ContentError(file, loc, "expected finite number"));
+            return;
+        }
+        if (!(value instanceof Map<?, ?>) && !(value instanceof List<?>)) {
+            return;
+        }
+        if (active.contains(value)) {
+            errors.add(new ContentError(file, loc, "recursive YAML alias is not allowed"));
+            return;
+        }
+        if (!visited.add(value)) {
+            return;
+        }
+        active.add(value);
+        if (value instanceof Map<?, ?> map) {
+            for (var entry : map.entrySet()) {
+                if (!(entry.getKey() instanceof String key)) {
+                    errors.add(new ContentError(file, loc, "non-string key in mapping"));
+                } else {
+                    checkTree(entry.getValue(), file, loc + "." + key, errors, active, visited);
+                }
+            }
+        } else if (value instanceof List<?> list) {
+            for (int i = 0; i < list.size(); i++) {
+                checkTree(list.get(i), file, loc + "[" + i + "]", errors, active, visited);
+            }
+        }
+        active.remove(value);
     }
 
     private static String firstLine(String message) {

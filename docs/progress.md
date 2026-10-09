@@ -1,6 +1,30 @@
 # 実装進捗ボード（IMPLEMENTATION.md §11.3 対応）
 
-更新: 2026-10-06
+更新: 2026-10-09
+
+> **現行チェックアウト:** 上流 `10d7767` を取り込み、`build` パッケージの欠落は解消済み。
+> データ検証・効果予算/条件判定・保存安全性を補完し、補助経路で **278テスト成功、Content検証エラー0**。
+> Gradle/Fabric全体ビルドと実機受け入れは未確認です。過去の完了記録と区別してください。
+> シールド・回復分配・撃破CD短縮と武器2本を追加。仕様・レビュー・実機手順は [ADR-29](adr/29-shields-and-kill-cooldowns.md)。
+> 詳細は [設計差分監査](implementation-audit.md) と [ADR-28](adr/28-safety-and-validation.md)。
+
+## 第4回の接続・監査
+
+難易度、出現時倍率、排他ドロップ、複数装備収集シム、サーバー取引・街ゲートを追加/修正。
+仕様と検証は [ADR-30](adr/30-rules-rewards-and-server-transactions.md)。
+設計書全体の残作業は [章別対応表](design-coverage.md)。**完全実装は未完了**。
+
+## 第5回の接続・監査
+
+詠唱・中断・次回詠唱短縮・灰詠みの杖を追加。MP/ST・heavy CD・詠唱HUDを接続。
+発動時スナップショットで投射のルーン/鍛造効果消失を修正し、固定seed効果ファズCLIを追加。
+[ADR-31](adr/31-casting-snapshots-and-effect-fuzz.md)。設計全体・実機受入は引き続き未完了。
+
+## 第6回の接続・監査
+
+効果の優先度・適用元・ID順序、遅延予約順、同期ダメージ因果・撃破snapshotを接続。
+死亡実体の重複排除と爆発二重ダメージを修正。37テスト追加、計278件成功。
+[ADR-32](adr/32-effect-order-and-causal-damage.md)。Mod境界は実機未確認、DOT/召喚因果等は未完了。
 
 ## フェーズ状況
 
@@ -30,6 +54,10 @@
 
 ## 直近の作業
 
+まず [設計差分監査](implementation-audit.md) に従い、Fabric全体ビルドを確認し、
+ロードアウト/C2S境界・保存ドメイン・効果の因果伝播を補完する。
+以下は従来の実機検証バックログ。
+
 1. Phase 2/3 の実機確認（`docs/p23-test.md` の P0〜P5）→ Gate判定
 2. S2 スパイク（固定Dimension・アリーナ清掃20回）→ ADR-08
 3. S3 スパイク（NPCシグナル: SPREAD/STACK/MOVE_TO_SAFE_SPOT）
@@ -38,7 +66,7 @@
 ## 検証コマンド
 
 ```powershell
-./gradlew :core:test                # 13テスト
+./gradlew :core:test                # 件数は実行結果で確認
 ./gradlew :tools:validateContent    # Content Pack 検証
 ./gradlew :mod:build                # Mod ビルド
 ./gradlew :mod:runClient            # 実機

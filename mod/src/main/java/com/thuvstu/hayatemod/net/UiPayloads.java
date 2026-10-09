@@ -72,6 +72,32 @@ public final class UiPayloads {
         }
     }
 
+    // ---- S2C: temporary shield (display only, never accepted from clients) ----
+
+    public record CombatState(float shield, int shieldTicks, int heavyLeft, int heavyTotal, float mana, float stamina) implements CustomPacketPayload {
+        public static final CustomPacketPayload.Type<CombatState> TYPE =
+                new CustomPacketPayload.Type<>(id("combat_state"));
+        public static final StreamCodec<RegistryFriendlyByteBuf, CombatState> CODEC =
+                StreamCodec.composite(ByteBufCodecs.FLOAT, CombatState::shield,
+                        ByteBufCodecs.INT, CombatState::shieldTicks,
+                        ByteBufCodecs.INT, CombatState::heavyLeft, ByteBufCodecs.INT, CombatState::heavyTotal,
+                        ByteBufCodecs.FLOAT, CombatState::mana, ByteBufCodecs.FLOAT, CombatState::stamina,
+                        CombatState::new);
+
+        @Override
+        public CustomPacketPayload.Type<? extends CustomPacketPayload> type() {
+            return TYPE;
+        }
+    }
+
+    public record CastingState(String slot, int remaining, int total) implements CustomPacketPayload {
+        public static final CustomPacketPayload.Type<CastingState> TYPE = new CustomPacketPayload.Type<>(id("casting_state"));
+        public static final StreamCodec<RegistryFriendlyByteBuf, CastingState> CODEC = StreamCodec.composite(
+                ByteBufCodecs.STRING_UTF8, CastingState::slot, ByteBufCodecs.INT, CastingState::remaining,
+                ByteBufCodecs.INT, CastingState::total, CastingState::new);
+        @Override public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
+    }
+
     // ---- S2C: party frames ----
 
     public record PartyMember(String name, String role, float hpFrac, boolean downed) {

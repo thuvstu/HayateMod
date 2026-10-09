@@ -1,5 +1,7 @@
 id: solommo:slag_brute_loot
-direct: []
+direct:
+  - item: solommo:echo_reaver
+    p: 0.03
 pity:
   currency: pity_shard
   per_kill: 1

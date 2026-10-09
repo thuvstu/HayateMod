@@ -24,7 +24,7 @@ public final class SkillKeyHandler {
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             while (fireboltKey.consumeClick()) {
                 if (client.player != null && ClientPlayNetworking.canSend(SkillCastPayload.TYPE)) {
-                    ClientPlayNetworking.send(new SkillCastPayload("special"));
+                    ClientPlayNetworking.send(new SkillCastPayload(client.player.isShiftKeyDown() ? "cancel" : "special"));
                 }
             }
         });

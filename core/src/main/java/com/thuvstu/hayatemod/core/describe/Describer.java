@@ -3,6 +3,7 @@ package com.thuvstu.hayatemod.core.describe;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import com.thuvstu.hayatemod.core.engine.EffectOrder;
 
 import com.thuvstu.hayatemod.core.content.model.Models.ActionDef;
 import com.thuvstu.hayatemod.core.content.model.Models.ConditionDef;
@@ -27,7 +28,7 @@ public final class Describer {
         if (!rune.flavor().isEmpty()) {
             lines.add(rune.flavor());
         }
-        for (EffectDef eff : rune.effects()) {
+        for (EffectDef eff : EffectOrder.ordered(rune.effects(), rune.id())) {
             lines.add(describeEffect(eff));
         }
         return lines;
@@ -59,12 +60,13 @@ public final class Describer {
         return lines;
     }
 
-    public static List<String> describeWeapon(WeaponCard w) {        List<String> lines = new ArrayList<>();
+    public static List<String> describeWeapon(WeaponCard w) {
+        List<String> lines = new ArrayList<>();
         lines.add(w.name());
         lines.add(rarityJp(w.rarity()) + w.family() + " / IL" + w.itemLevel());
         for (Map.Entry<String, SkillDef> e : w.skills().entrySet()) {
             lines.add(slotJp(e.getKey()) + describeSkill(e.getValue()));
-            for (EffectDef eff : e.getValue().effects()) {
+            for (EffectDef eff : EffectOrder.ordered(e.getValue().effects(), w.id() + ":" + e.getKey())) {
                 lines.add("  " + describeEffect(eff));
             }
         }
@@ -121,6 +123,7 @@ public final class Describer {
 
     static String triggerJp(String trigger) {
         return switch (trigger) {
+            case "on_cast" -> "直接スキル発動成功時";
             case "on_hit" -> "命中時";
             case "on_kill" -> "撃破時";
             case "on_damaged" -> "被弾時";
@@ -134,6 +137,7 @@ public final class Describer {
 
     static String conditionJp(ConditionDef c) {
         return switch (c.type()) {
+            case "self_has_shield" -> "自身のシールドが残っている場合";
             case "target_has_status" -> "対象が" + statusJp(c.status()) + "状態の場合";
             case "chance" -> "確率" + trim(c.value() * 100) + "%の場合";
             case "sneaking" -> "スニーク中の場合";
@@ -159,6 +163,15 @@ public final class Describer {
                     + "、半径" + trim(a.radius()) + "m以内" + targetJp(a.target()) + inheritJp(a.inheritTags()) + "）";
             case "dash" -> "前方" + trim(a.distance()) + "mへ突進する";
             case "heal_self" -> "自身を" + amount + "回復する";
+            case "grant_shield" -> "自身に耐久" + amount + "のシールドを" + trim(a.durationTicks() / 20.0)
+                    + "秒付与する（加算なし、弱い付与は更新しない）";
+            case "heal_with_shield" -> "回復量" + amount + "のうち" + trim(a.shieldRatio() * 100)
+                    + "%を" + trim(a.durationTicks() / 20.0)
+                    + "秒の自身シールドに変換し、残りを自身のHP回復に使う（シールド加算なし、弱い付与は更新しない）";
+            case "reduce_next_cast" -> "自身の次の" + a.ref() + "の詠唱を" + amount + "秒短縮する（"
+                    + trim(a.durationTicks() / 20.0) + "秒以内に1回、加算なし、詠唱開始時に消費）";
+            case "reduce_cooldown" -> "自身の" + a.ref() + "の残りクールダウンを" + amount
+                    + "秒短縮する（次回への持ち越しなし）";
             case "apply_status" -> "対象に" + statusJp(a.status()) + "を付与する";
             case "blink" -> "対象の位置へ瞬間移動する";
             case "leap" -> "前方へ跳躍する（" + trim(a.distance()) + "m）";
@@ -200,6 +213,7 @@ public final class Describer {
 
     static String coreJp(String core, Map<String, Object> mods) {
         return switch (core) {
+            case "self_buff" -> "自己強化";
             case "melee_thrust" -> "突き";
             case "projectile_single" -> "単発投射";
             case "heavy_slam" -> "強打";

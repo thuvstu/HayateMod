@@ -12,7 +12,7 @@ public final class TestContent {
         for (String candidate : new String[] {"content", "../content", "../../content"}) {
             Path p = Path.of(candidate);
             if (Files.isDirectory(p) && Files.isRegularFile(p.resolve("vocabulary/core.yaml"))) {
-                return p;
+                return p.toAbsolutePath().normalize();
             }
         }
         throw new IllegalStateException("content directory not found from " + Path.of("").toAbsolutePath());

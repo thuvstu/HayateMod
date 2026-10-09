@@ -4,14 +4,14 @@ import com.thuvstu.hayatemod.dungeon.EncounterRunner;
 import com.thuvstu.hayatemod.content.ContentHolder;
 import com.thuvstu.hayatemod.rpg.RpgSkills;
 import com.thuvstu.hayatemod.town.TownManager;
-import com.thuvstu.hayatemod.net.UiPayloads.CraftMake;import com.thuvstu.hayatemod.net.UiPayloads.KeystoneToggle;
+import com.thuvstu.hayatemod.net.UiPayloads.CraftMake;
+import com.thuvstu.hayatemod.net.UiPayloads.KeystoneToggle;
 import com.thuvstu.hayatemod.net.UiPayloads.LoadoutApply;
 import com.thuvstu.hayatemod.net.UiPayloads.LoadoutSave;
 import com.thuvstu.hayatemod.net.UiPayloads.MarketBuy;
 import com.thuvstu.hayatemod.net.UiPayloads.MarketSell;
 import com.thuvstu.hayatemod.net.UiPayloads.SalvageHeld;
 import com.thuvstu.hayatemod.net.UiPayloads.TavernEnter;
-import com.thuvstu.hayatemod.rpg.SolommoCommand;
 import com.thuvstu.hayatemod.rpg.SolommoCommand;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
@@ -36,6 +36,8 @@ public final class NetRegistry {
         var s2c = PayloadTypeRegistry.playS2C();
         s2c.register(UiPayloads.MarketOpen.TYPE, UiPayloads.MarketOpen.CODEC);
         s2c.register(UiPayloads.SkillState.TYPE, UiPayloads.SkillState.CODEC);
+        s2c.register(UiPayloads.CombatState.TYPE, UiPayloads.CombatState.CODEC);
+        s2c.register(UiPayloads.CastingState.TYPE, UiPayloads.CastingState.CODEC);
         s2c.register(UiPayloads.PartyState.TYPE, UiPayloads.PartyState.CODEC);
         s2c.register(UiPayloads.TavernOpen.TYPE, UiPayloads.TavernOpen.CODEC);
         s2c.register(UiPayloads.CodexOpen.TYPE, UiPayloads.CodexOpen.CODEC);
@@ -73,11 +75,11 @@ public final class NetRegistry {
             UiServer.openLoadout(ctx.player());
         });
         ServerPlayNetworking.registerGlobalReceiver(TavernEnter.TYPE, (payload, ctx) -> {
-            if (TownManager.requireTown(ctx.player())) {
+            if (ContentHolder.ready() && TownManager.requireTown(ctx.player())) {
                 String id = payload.encounter();
                 if (id == null || id.isEmpty()
                         || !ContentHolder.get().encounters().containsKey(id)) {
-                    id = "solommo:flame_golem";
+                    return; // Unknown requests never silently enter another encounter.
                 }
                 EncounterRunner.enter(ctx.player(), id);
             }

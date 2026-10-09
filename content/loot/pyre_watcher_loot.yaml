@@ -1,6 +1,8 @@
-﻿# watcher rewards (directなし)
+﻿# watcher rewards
 id: solommo:pyre_watcher_loot
-direct: []
+direct:
+  - item: solommo:ashen_chant
+    p: 0.025
 pity:
   currency: pity_shard
   per_kill: 1

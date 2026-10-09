@@ -9,6 +9,7 @@ import java.util.Set;
 import java.util.UUID;
 
 import com.thuvstu.hayatemod.core.content.ContentSet;
+import com.thuvstu.hayatemod.core.content.model.Models.ExecutionLimits;
 import com.thuvstu.hayatemod.core.content.model.Models.ActionDef;
 import com.thuvstu.hayatemod.core.content.model.Models.ConditionDef;
 import com.thuvstu.hayatemod.core.content.model.Models.EffectDef;
@@ -26,10 +27,73 @@ import com.thuvstu.hayatemod.core.engine.WorldAdapter.DamageKind;
  */
 public final class EffectEngine {
     public static final long IGNITE_TICKS = 100L;
+    private final ExecutionLimits executionLimits;
+    private long budgetTick = Long.MIN_VALUE;
+    private int actionsThisTick;
+    private int effectsThisTick;
+    private int tasksThisTick;
+
+    private void refreshBudget() {
+        long now = world.gameTime();
+        if (budgetTick != now) {
+            budgetTick = now;
+            actionsThisTick = 0;
+            effectsThisTick = 0;
+            tasksThisTick = 0;
+        }
+    }
+
+    private boolean takeAction() {
+        refreshBudget();
+        if (actionsThisTick >= executionLimits.actionsPerTick()) {
+            return false;
+        }
+        actionsThisTick++;
+        return true;
+    }
+
+    public int executedActionsThisTick() {
+        refreshBudget();
+        return actionsThisTick;
+    }
+
+    private int maximumObservedChainDepth;
+    public int maximumObservedChainDepth() { return maximumObservedChainDepth; }
+    public int evaluatedEffectsThisTick() { refreshBudget(); return effectsThisTick; }
+    public int executedTasksThisTick() { refreshBudget(); return tasksThisTick; }
+
+    public int pendingTaskCount() {
+        return scheduled.size();
+    }
+
+    private int chainLimit() {
+        return Math.max(0, Math.min(3, content.vocabulary().maxChainDepth()));
+    }
+
+    private int projectileLimit() {
+        return Math.max(0, Math.min(256, content.vocabulary().maxProjectiles()));
+    }
 
     private final ContentSet content;
     private final WorldAdapter world;
     private final StatusStore statuses = new StatusStore();
+    private record CastBoostKey(UUID owner, String weapon, String slot) { }
+    private record CastBoost(long reduction, long expires) { }
+    private final Map<CastBoostKey, CastBoost> castBoosts = new HashMap<>();
+    private final Map<UUID, PendingCast> pendingCasts = new HashMap<>();
+    private static final class PendingCast {
+        final WeaponCard card;
+        final String slot;
+        final BuildMods mods;
+        final long due, total;
+        UUID task;
+        PendingCast(WeaponCard card, String slot, BuildMods mods, long due, long total) {
+            this.card = card; this.slot = slot; this.mods = mods; this.due = due; this.total = total;
+        }
+    }
+
+    private final ShieldStore shields;
+    private final Map<UUID, Long> continuationEpochs = new HashMap<>();
     private final Map<UUID, CastContext> liveProjectiles = new HashMap<>();
     private final Map<String, Long> lastCastTick = new HashMap<>();
     private final List<ScheduledTask> scheduled = new ArrayList<>();
@@ -48,12 +112,27 @@ public final class EffectEngine {
     public EffectEngine(ContentSet content, WorldAdapter world) {
         this.content = content;
         this.world = world;
+        this.executionLimits = content.vocabulary().executionLimits();
+        var combat = content.vocabulary().combatLimits();
+        this.shields = new ShieldStore(combat.maxShieldAmount(), combat.maxShieldDurationTicks());
     }
 
-    /** Queues engine work after a delay (telegraph windups, delayed bursts). Returns a task id. */
+    private long taskSequence;
+
+    /** Queues bounded work; returns null if the queue is full. Rejected work never runs. */
     public UUID schedule(long delayTicks, Runnable task) {
+        return schedule(delayTicks, EffectOrder.SYSTEM, task);
+    }
+
+    private UUID schedule(long delayTicks, EffectOrder.Key order, Runnable task) {
+        if (scheduled.size() >= executionLimits.pendingTasks()) {
+            return null;
+        }
+        long now = world.gameTime();
+        long delay = Math.max(0, delayTicks);
+        long due = now > Long.MAX_VALUE - delay ? Long.MAX_VALUE : now + delay;
         UUID id = UUID.randomUUID();
-        scheduled.add(new ScheduledTask(id, world.gameTime() + delayTicks, task));
+        scheduled.add(new ScheduledTask(id, due, order, taskSequence++, task));
         return id;
     }
 
@@ -65,11 +144,15 @@ public final class EffectEngine {
     /** Advances scheduled work and status expiry. The game calls this every tick. */
     public void tick() {
         long now = world.gameTime();
+        refreshBudget();
         var due = new ArrayList<ScheduledTask>();
+        scheduled.sort(java.util.Comparator.comparingLong(ScheduledTask::dueTick)
+                .thenComparing(ScheduledTask::order, EffectOrder.COMPARATOR).thenComparingLong(ScheduledTask::sequence));
         var it = scheduled.iterator();
         while (it.hasNext()) {
             ScheduledTask t = it.next();
-            if (t.dueTick() <= now) {
+            if (t.dueTick() <= now && tasksThisTick < executionLimits.tasksPerTick()) {
+                tasksThisTick++;
                 due.add(t);
                 it.remove();
             }
@@ -78,9 +161,11 @@ public final class EffectEngine {
             t.task().run();
         }
         statuses.cleanup(now);
+        shields.cleanup(now);
+        castBoosts.values().removeIf(boost -> boost.expires() <= now);
     }
 
-    private record ScheduledTask(UUID id, long dueTick, Runnable task) {
+    private record ScheduledTask(UUID id, long dueTick, EffectOrder.Key order, long sequence, Runnable task) {
     }
 
     /**
@@ -89,8 +174,7 @@ public final class EffectEngine {
      * event delivery is capped absolutely.
      */
     private int maxEventDepth() {
-        int limit = content.vocabulary() != null ? content.vocabulary().maxChainDepth() : 3;
-        return limit + 2;
+        return chainLimit() + 2;
     }
 
     private boolean enterEvent() {
@@ -151,7 +235,10 @@ public final class EffectEngine {
         OK,
         ON_COOLDOWN,
         UNSUPPORTED_CORE,
-        NO_RESOURCE
+        NO_RESOURCE,
+        CASTING,
+        ALREADY_CASTING,
+        LIMIT_REACHED
     }
 
     public record CastOutcome(CastResult result, long remainingTicks) {
@@ -186,66 +273,169 @@ public final class EffectEngine {
     }
 
     public CastOutcome castSkill(UUID caster, WeaponCard card, String slot, BuildMods mods) {
+        card = SkillSnapshot.copy(card);
         SkillDef skill = card.skills().get(slot);
-        if (skill == null) {
+        if (skill == null || !Set.of("projectile_single", "melee_thrust", "heavy_slam",
+                "summon_minions", "dash", "self_buff").contains(skill.core())) {
             return new CastOutcome(CastResult.UNSUPPORTED_CORE, 0);
         }
+        if (skill.core().equals("summon_minions")
+                && (!(skill.mods().get("enemy") instanceof String id) || id.isBlank())) {
+            return new CastOutcome(CastResult.UNSUPPORTED_CORE, 0);
+        }
+        PendingCast active = pendingCasts.get(caster);
+        if (active != null) return new CastOutcome(CastResult.ALREADY_CASTING, Math.max(0, active.due - world.gameTime()));
+        long remaining = remainingCooldownTicks(caster, card, slot, mods);
+        if (remaining > 0) return new CastOutcome(CastResult.ON_COOLDOWN, remaining);
+        // Boss pseudo-slot "cast" is already timed by EncounterRunner's telegraph. Never wait twice.
+        double seconds = Set.of("special", "heavy").contains(slot) ? modDouble(skill, "cast_time", 0) : 0;
+        if (!Double.isFinite(seconds) || seconds < 0) return new CastOutcome(CastResult.UNSUPPORTED_CORE, 0);
+        long baseTicks = (long) Math.ceil(Math.min(seconds, content.vocabulary().castingLimits().maxCastSeconds()) * 20);
+        CastBoostKey key = new CastBoostKey(caster, card.id(), slot);
+        long ticks = Math.max(0, baseTicks - nextCastReductionTicks(caster, card, slot));
         long now = world.gameTime();
-        String key = caster + ":" + card.id() + ":" + slot;
-        long cooldownTicks = cooldownTicks(card, slot, mods);
-        Long last = lastCastTick.get(key);
-        if (last != null && now - last < cooldownTicks) {
-            return new CastOutcome(CastResult.ON_COOLDOWN, cooldownTicks - (now - last));
+        PendingCast pending = new PendingCast(card, slot, mods,
+                now > Long.MAX_VALUE - ticks ? Long.MAX_VALUE : now + ticks, ticks);
+        if (ticks > 0) {
+            // Reserve the shared task budget before taking costs or consuming the one-shot boost.
+            pending.task = schedule(ticks, () -> {
+                if (pendingCasts.get(caster) != pending) return;
+                pendingCasts.remove(caster);
+                completeCast(caster, pending.card, pending.slot, pending.mods);
+            });
+            if (pending.task == null) return new CastOutcome(CastResult.LIMIT_REACHED, 0);
         }
         Object resource = skill.mods().get("resource");
         Object cost = skill.mods().get("resource_cost");
-        if (resource instanceof String name && !name.isEmpty() && cost instanceof Number n) {
-            if (!world.tryConsumeResource(caster, name, n.doubleValue())) {
-                return new CastOutcome(CastResult.NO_RESOURCE, 0);
-            }
+        if (resource instanceof String name && !name.isEmpty() && cost instanceof Number n
+                && !world.tryConsumeResource(caster, name, n.doubleValue())) {
+            if (pending.task != null) cancel(pending.task);
+            return new CastOutcome(CastResult.NO_RESOURCE, 0);
         }
-        CastContext ctx = new CastContext(card.id() + ":" + slot, 0, Set.of(), caster, 1.0, mods);
-        switch (skill.core()) {
-            case "projectile_single" -> {
-                lastCastTick.put(key, now);
-                Vec3 dir = world.facing(caster);
-                UUID bolt = world.spawnBolt(caster, world.eyePos(caster), dir, 2.0, ctx);
-                liveProjectiles.put(bolt, ctx);
-                eventLog.accept("cast " + card.id() + ":" + slot);
-                return new CastOutcome(CastResult.OK, 0);
-            }
-            case "melee_thrust" -> {
-                lastCastTick.put(key, now);
-                meleeStrike(caster, card, skill, ctx);
-                eventLog.accept("cast " + card.id() + ":" + slot);
-                return new CastOutcome(CastResult.OK, 0);
-            }
-            case "heavy_slam" -> {
-                lastCastTick.put(key, now);
-                slamStrike(caster, card, skill, ctx);
-                eventLog.accept("cast " + card.id() + ":" + slot);
-                return new CastOutcome(CastResult.OK, 0);
-            }
-            case "summon_minions" -> {
-                Object enemy = skill.mods().get("enemy");
-                if (!(enemy instanceof String enemyId) || enemyId.isEmpty()) {
-                    return new CastOutcome(CastResult.UNSUPPORTED_CORE, 0);
-                }
-                lastCastTick.put(key, now);
-                summonMinions(caster, enemyId, (int) modDouble(skill, "count", 1));
-                eventLog.accept("summon " + enemyId);
-                return new CastOutcome(CastResult.OK, 0);
-            }
-            case "dash" -> {
-                lastCastTick.put(key, now);
-                dashMove(caster, modDouble(skill, "distance", 6.0));
-                eventLog.accept("dash");
-                return new CastOutcome(CastResult.OK, 0);
-            }
-            default -> {
-                return new CastOutcome(CastResult.UNSUPPORTED_CORE, 0);
-            }
+        lastCastTick.put(cooldownKey(caster, card, slot), now);
+        if (baseTicks > 0) castBoosts.remove(key); // Instant native skills do not consume a future timed-cast boost.
+        if (ticks > 0) {
+            pendingCasts.put(caster, pending);
+            return new CastOutcome(CastResult.CASTING, ticks);
         }
+        completeCast(caster, card, slot, mods);
+        return new CastOutcome(CastResult.OK, 0);
+    }
+
+    private void completeCast(UUID caster, WeaponCard card, String slot, BuildMods mods) {
+        SkillDef skill = card.skills().get(slot);
+        long now = world.gameTime();
+        CastContext ctx = new CastContext(card.id() + ":" + slot, 0, Set.of(), caster, 1.0, mods, card);
+        var effects = prepareTrigger(skill, ctx, caster, baseDamage(card, skill),
+                snapshotStatuses(caster, now), now, "on_cast");
+        executePrepared(card, caster, effects, now);
+        castChild(card, slot, ctx);
+    }
+
+    public long castRemainingTicks(UUID owner) {
+        PendingCast cast = pendingCasts.get(owner);
+        return cast == null ? 0 : Math.max(0, cast.due - world.gameTime());
+    }
+
+    public long castTotalTicks(UUID owner) {
+        PendingCast cast = pendingCasts.get(owner);
+        return cast == null ? 0 : cast.total;
+    }
+
+    public String castingWeapon(UUID owner) {
+        PendingCast cast = pendingCasts.get(owner);
+        return cast == null ? "" : cast.card.id();
+    }
+
+    public String castingSlot(UUID owner) {
+        PendingCast cast = pendingCasts.get(owner);
+        return cast == null ? "" : cast.slot;
+    }
+
+    /** Interrupts without refund: costs, cooldown and any consumed boost commit at acceptance. */
+    public boolean cancelCast(UUID owner) {
+        PendingCast cast = pendingCasts.remove(owner);
+        if (cast == null) return false;
+        cancel(cast.task);
+        return true;
+    }
+
+    public long nextCastReductionTicks(UUID owner, WeaponCard card, String slot) {
+        CastBoostKey key = new CastBoostKey(owner, card.id(), slot);
+        CastBoost boost = castBoosts.get(key);
+        if (boost == null) return 0;
+        if (boost.expires() <= world.gameTime()) { castBoosts.remove(key); return 0; }
+        return boost.reduction();
+    }
+
+    private void reduceNextCast(UUID owner, WeaponCard card, ActionDef action) {
+        if (!card.skills().containsKey(action.ref()) || !Double.isFinite(action.amount()) || action.amount() <= 0
+                || action.durationTicks() <= 0) return;
+        var limits = content.vocabulary().castingLimits();
+        long ticks = (long) Math.ceil(Math.min(action.amount(), limits.maxCastSeconds()) * 20);
+        if (ticks < nextCastReductionTicks(owner, card, action.ref())) return;
+        long duration = Math.min(action.durationTicks(), limits.maxBoostDurationTicks());
+        castBoosts.put(new CastBoostKey(owner, card.id(), action.ref()), new CastBoost(ticks, world.gameTime() > Long.MAX_VALUE - duration ? Long.MAX_VALUE : world.gameTime() + duration));
+    }
+
+    private String cooldownKey(UUID owner, WeaponCard card, String slot) {
+        return owner + ":" + card.id() + ":" + slot;
+    }
+
+    public long remainingCooldownTicks(UUID owner, WeaponCard card, String slot, BuildMods mods) {
+        Long last = lastCastTick.get(cooldownKey(owner, card, slot));
+        if (last == null) {
+            return 0;
+        }
+        return Math.max(0, cooldownTicks(card, slot, mods) - Math.max(0, world.gameTime() - last));
+    }
+
+    private void reduceCooldown(UUID owner, WeaponCard card, String slot, BuildMods mods, double seconds) {
+        if (!Double.isFinite(seconds) || seconds <= 0 || !card.skills().containsKey(slot)) {
+            return;
+        }
+        long remaining = remainingCooldownTicks(owner, card, slot, mods);
+        if (remaining == 0) {
+            return; // Never bank reductions for a future cast.
+        }
+        double limit = content.vocabulary().combatLimits().maxCooldownReductionSeconds();
+        long ticks = (long) (Math.min(seconds, limit) * 20);
+        String key = cooldownKey(owner, card, slot);
+        lastCastTick.put(key, lastCastTick.get(key) - Math.min(remaining, ticks));
+    }
+
+    public double shieldAmount(UUID owner) {
+        return shields.amount(owner, world.gameTime());
+    }
+
+    public long shieldRemainingTicks(UUID owner) {
+        return shields.remainingTicks(owner, world.gameTime());
+    }
+
+    public double damageAfterShield(UUID owner, double damage) {
+        return shields.preview(owner, damage, world.gameTime());
+    }
+
+    /** Called exactly once at the player's RPG HP funnel, after damage interception/scaling. */
+    public double absorbShield(UUID owner, double damage) {
+        return shields.absorb(owner, damage, world.gameTime());
+    }
+
+    /** Reset boundaries also invalidate pending effect continuations, preventing post-respawn recovery. */
+    public void clearShield(UUID owner) {
+        shields.clear(owner);
+        cancelCast(owner);
+        castBoosts.keySet().removeIf(key -> key.owner().equals(owner));
+        continuationEpochs.merge(owner, 1L, Long::sum);
+    }
+
+    private UUID scheduleContinuation(long delay, UUID owner, EffectOrder.Key order, Runnable task) {
+        long epoch = continuationEpochs.getOrDefault(owner, 0L);
+        return schedule(delay, order, () -> {
+            if (continuationEpochs.getOrDefault(owner, 0L) == epoch) {
+                task.run();
+            }
+        });
     }
 
     /** Called by the adapter when a tracked projectile hits something. */
@@ -254,7 +444,7 @@ public final class EffectEngine {
         if (ctx == null) {
             return;
         }
-        Resolved r = resolve(ctx.skillId());
+        Resolved r = resolve(ctx);
         if (r == null) {
             return;
         }
@@ -262,47 +452,52 @@ public final class EffectEngine {
         // §6.6: conditions are judged on the snapshot at event start, before delivery applies.
         Set<String> preStatuses = snapshotStatuses(victim, now);
         double base = scaledBase(r.card(), r.skill(), ctx.owner(), ctx.damageMult(), ctx.mods(), false);
-        world.dealDamage(ctx.owner(), victim, base, DamageKind.PROJECTILE, projectileId);
+        var effects = prepareTrigger(r.skill(), ctx, victim, base, preStatuses, now, "on_hit");
+        world.dealDamage(ctx.owner(), victim, base, DamageKind.PROJECTILE, projectileId, ctx);
         if (isFire(r.skill())) {
             statuses.add(victim, "ignite", now + IGNITE_TICKS);
         }
-        applyTrigger(r.card(), r.skill(), ctx, ctx.owner(), victim, base, preStatuses, now, "on_hit");
+        executePrepared(r.card(), ctx.owner(), effects, now);
     }
 
     /** Vanilla-attack replacement for weapon melee. */
     public void meleeStrike(UUID attacker, WeaponCard card, SkillDef skill, CastContext ctx) {
-        meleeStrike(attacker, card, skill, ctx, BuildMods.neutral());
+        meleeStrike(attacker, card, skill, ctx, ctx.mods());
     }
 
     public void meleeStrike(UUID attacker, WeaponCard card, SkillDef skill, CastContext ctx,
             BuildMods mods) {
+        if (ctx.snapshot() == null) ctx = ctx.withSnapshot(SkillSnapshot.copy(card));
         double range = modDouble(skill, "range", 3.0) + 1.0;
-        List<UUID> targets = world.targetsInArc(attacker, range, 0.5);
-        double base = scaledBase(card, skill, attacker, 1.0, mods, true);
+        List<UUID> targets = world.targetsInArc(attacker, range, 0.5).stream().distinct().sorted().toList();
+        double base = scaledBase(card, skill, attacker, ctx.damageMult(), mods, true);
         long now = world.gameTime();
         for (UUID target : targets) {
             Set<String> preStatuses = snapshotStatuses(target, now);
-            world.dealDamage(attacker, target, base, DamageKind.MELEE, null);
-            applyTrigger(card, skill, ctx, attacker, target, base, preStatuses, now, "on_hit");
+            var effects = prepareTrigger(skill, ctx, target, base, preStatuses, now, "on_hit");
+            world.dealDamage(attacker, target, base, DamageKind.MELEE, null, ctx);
+            executePrepared(card, attacker, effects, now);
         }
     }
 
     /** Point-blank AoE around the caster (heavy_slam delivery). */
     public void slamStrike(UUID attacker, WeaponCard card, SkillDef skill, CastContext ctx) {
-        slamStrike(attacker, card, skill, ctx, BuildMods.neutral());
+        slamStrike(attacker, card, skill, ctx, ctx.mods());
     }
 
     public void slamStrike(UUID attacker, WeaponCard card, SkillDef skill, CastContext ctx,
             BuildMods mods) {
+        if (ctx.snapshot() == null) ctx = ctx.withSnapshot(SkillSnapshot.copy(card));
         double radius = modDouble(skill, "radius", 6.0);
-        List<UUID> targets = world.targetsInArc(attacker, radius, -1.0);
-        double base = scaledBase(card, skill, attacker, 1.0, mods, true);
+        List<UUID> targets = world.targetsInArc(attacker, radius, -1.0).stream().distinct().sorted().toList();
+        double base = scaledBase(card, skill, attacker, ctx.damageMult(), mods, true);
         long now = world.gameTime();
         world.burstParticles(attacker, world.pos(attacker));
         for (UUID target : targets) {
             Set<String> preStatuses = snapshotStatuses(target, now);
-            world.dealDamage(attacker, target, base, DamageKind.MELEE, null);
-            applyTrigger(card, skill, ctx, attacker, target, base, preStatuses, now, "on_hit");
+            var effects = prepareTrigger(skill, ctx, target, base, preStatuses, now, "on_hit");
+            world.dealDamage(attacker, target, base, DamageKind.MELEE, null, ctx);
+            executePrepared(card, attacker, effects, now);
         }
     }
 
@@ -312,71 +507,67 @@ public final class EffectEngine {
     }
 
     public void onKill(WeaponCard card, UUID attacker, UUID victim, BuildMods mods) {
-        long now = world.gameTime();
-        Set<String> preStatuses = snapshotStatuses(victim, now);
-        boolean fired = false;
-        for (SkillDef skill : card.skills().values()) {
-            boolean hasKill = skill.effects().stream().anyMatch(e -> e.trigger().equals("on_kill"));
-            if (!hasKill) {
-                continue;
-            }
-            double base = scaledBase(card, skill, attacker, 1.0, mods, false);
-            CastContext ctx = new CastContext(card.id() + ":kill", 0, Set.of(), attacker, 1.0, mods);
-            applyTrigger(card, skill, ctx, attacker, victim, base, preStatuses, now, "on_kill");
-            fired = true;
-        }
-        if (fired) {
-            eventLog.accept("kill " + card.id());
-        }
+        dispatch(card, attacker, attacker, victim, mods, "on_kill");
     }
 
     /** Defender-side trigger: fires the victim weapon's on_damaged effects once each. */
     public void onDamaged(WeaponCard card, UUID victim, UUID attacker) {
-        if (!hasTrigger(card, "on_damaged")) {
-            return;
-        }        long now = world.gameTime();
-        Set<String> preStatuses = snapshotStatuses(victim, now);
-        boolean fired = false;
-        for (SkillDef skill : card.skills().values()) {
-            boolean has = skill.effects().stream().anyMatch(e -> e.trigger().equals("on_damaged"));
-            if (!has) {
-                continue;
-            }
-            double base = scaledBase(card, skill, victim, 1.0, BuildMods.neutral(), false);
-            CastContext ctx = new CastContext(card.id() + ":hurt", 0, Set.of(), victim, 1.0,
-                    BuildMods.neutral());
-            applyTrigger(card, skill, ctx, attacker, victim, base, preStatuses, now, "on_damaged");
-            fired = true;
-        }
-        if (fired) {
-            eventLog.accept("damaged " + card.id());
-        }
+        dispatch(card, victim, attacker, victim, BuildMods.neutral(), "on_damaged");
     }
 
     /** Join buff: fires the joining weapon's on_join effects once each. */
     public void onJoin(WeaponCard card, UUID player, BuildMods mods) {
-        if (!hasTrigger(card, "on_join")) {
-            return;
+        dispatch(card, player, player, player, mods, "on_join");
+    }
+
+    public void onKill(WeaponCard card, UUID attacker, UUID victim, BuildMods mods, CastContext cause) {
+        if (cause != null && attacker.equals(cause.owner()) && cause.snapshot() != null) {
+            card = cause.snapshot();
+            mods = cause.mods();
         }
+        dispatch(card, attacker, attacker, victim, mods, "on_kill", cause);
+    }
+
+    public void onDamaged(WeaponCard card, UUID victim, UUID attacker, BuildMods mods, CastContext cause) {
+        dispatch(card, victim, attacker, victim, mods, "on_damaged", cause);
+    }
+
+    public void onDeath(WeaponCard card, UUID victim, UUID killer, BuildMods mods, CastContext cause) {
+        dispatch(card, victim, killer, victim, mods, "on_death", cause);
+    }
+
+    private void dispatch(WeaponCard card, UUID owner, UUID attacker, UUID victim,
+            BuildMods mods, String trigger) {
+        dispatch(card, owner, attacker, victim, mods, trigger, null);
+    }
+
+    private void dispatch(WeaponCard card, UUID owner, UUID attacker, UUID victim,
+            BuildMods mods, String trigger, CastContext cause) {
         long now = world.gameTime();
-        boolean fired = false;
-        for (SkillDef skill : card.skills().values()) {
-            boolean has = skill.effects().stream().anyMatch(e -> e.trigger().equals("on_join"));
-            if (!has) {
-                continue;
-            }
-            double base = scaledBase(card, skill, player, 1.0, mods, false);
-            CastContext ctx = new CastContext(card.id() + ":join", 0, Set.of(), player, 1.0, mods);
-            applyTrigger(card, skill, ctx, player, player, base, Set.of(), now, "on_join");
-            fired = true;
+        Set<String> pre = snapshotStatuses(victim, now);
+        List<EffectCandidate> candidates = new ArrayList<>();
+        for (var entry : card.skills().entrySet().stream().sorted(Map.Entry.comparingByKey()).toList()) {
+            SkillDef skill = entry.getValue();
+            double base = scaledBase(card, skill, owner, 1.0, mods, false);
+            CastContext ctx = new CastContext(card.id() + ":" + entry.getKey(), cause == null ? 0 : cause.chainDepth(),
+                    cause == null ? Set.of() : cause.preventRecursive(), owner, 1.0, mods, SkillSnapshot.copy(card));
+            collectTrigger(candidates, skill, ctx, victim, base, pre, trigger);
         }
-        if (fired) {
-            eventLog.accept("join " + card.id());
+        var prepared = prepareCandidates(candidates, now);
+        executePrepared(card, attacker, prepared, now);
+        if (!prepared.isEmpty()) {
+            eventLog.accept(trigger + " " + card.id());
         }
     }
 
+    /** Slot ids are stable even when cards were assembled from unordered maps. */
+    private static List<SkillDef> orderedSkills(WeaponCard card) {
+        return card.skills().entrySet().stream().sorted(Map.Entry.comparingByKey())
+                .map(Map.Entry::getValue).toList();
+    }
+
     public static boolean hasTrigger(WeaponCard card, String trigger) {
-        for (SkillDef skill : card.skills().values()) {
+        for (SkillDef skill : orderedSkills(card)) {
             for (EffectDef e : skill.effects()) {
                 if (e.trigger().equals(trigger)) {
                     return true;
@@ -388,46 +579,12 @@ public final class EffectEngine {
 
     /** Block-break proc: fires the miner weapon's on_break effects once each. */
     public void onBreak(WeaponCard card, UUID miner, BuildMods mods) {
-        if (!hasTrigger(card, "on_break")) {
-            return;
-        }
-        long now = world.gameTime();
-        boolean fired = false;
-        for (SkillDef skill : card.skills().values()) {
-            boolean has = skill.effects().stream().anyMatch(e -> e.trigger().equals("on_break"));
-            if (!has) {
-                continue;
-            }
-            double base = scaledBase(card, skill, miner, 1.0, mods, false);
-            CastContext ctx = new CastContext(card.id() + ":break", 0, Set.of(), miner, 1.0, mods);
-            applyTrigger(card, skill, ctx, miner, miner, base, Set.of(), now, "on_break");
-            fired = true;
-        }
-        if (fired) {
-            eventLog.accept("break " + card.id());
-        }
+        dispatch(card, miner, miner, miner, mods, "on_break");
     }
 
     /** Deathburst: fires the victim weapon's on_death effects once each. */
     public void onDeath(WeaponCard card, UUID victim, UUID killer, BuildMods mods) {
-        if (!hasTrigger(card, "on_death")) {
-            return;
-        }
-        long now = world.gameTime();
-        boolean fired = false;
-        for (SkillDef skill : card.skills().values()) {
-            boolean has = skill.effects().stream().anyMatch(e -> e.trigger().equals("on_death"));
-            if (!has) {
-                continue;
-            }
-            double base = scaledBase(card, skill, victim, 1.0, mods, false);
-            CastContext ctx = new CastContext(card.id() + ":death", 0, Set.of(), victim, 1.0, mods);
-            applyTrigger(card, skill, ctx, killer, victim, base, Set.of(), now, "on_death");
-            fired = true;
-        }
-        if (fired) {
-            eventLog.accept("death " + card.id());
-        }
+        dispatch(card, victim, killer, victim, mods, "on_death");
     }
 
     /**
@@ -440,7 +597,8 @@ public final class EffectEngine {
         }
         long now = world.gameTime();
         boolean fired = false;
-        for (var entry : card.skills().entrySet()) {
+        List<EffectCandidate> candidates = new ArrayList<>();
+        for (var entry : card.skills().entrySet().stream().sorted(Map.Entry.comparingByKey()).toList()) {
             SkillDef skill = entry.getValue();
             boolean has = skill.effects().stream().anyMatch(e -> e.trigger().equals("on_timer"));
             if (!has) {
@@ -455,15 +613,24 @@ public final class EffectEngine {
             lastCastTick.put(key, now);
             double base = scaledBase(card, skill, owner, 1.0, mods, false);
             double radius = modDouble(skill, "radius", 4.0);
-            CastContext ctx = new CastContext(card.id() + ":timer", 0, Set.of(), owner, 1.0, mods);
-            for (UUID target : world.targetsInArc(owner, radius, -1.0)) {
-                Set<String> pre = snapshotStatuses(target, now);
-                applyTrigger(card, skill, ctx, owner, target, base, pre, now, "on_timer");
+            CastContext ctx = new CastContext(card.id() + ":" + entry.getKey(), 0, Set.of(), owner, 1.0, mods, SkillSnapshot.copy(card));
+            Set<UUID> targets = new java.util.TreeSet<>(world.targetsInArc(owner, radius, -1.0));
+            targets.add(owner);
+            for (int index = 0; index < skill.effects().size(); index++) {
+                EffectDef effect = skill.effects().get(index);
+                if (!effect.trigger().equals("on_timer")) continue;
+                var order = EffectOrder.key(effect, ctx.skillId(), index);
+                if (effect.scope().equals("area")) {
+                    candidates.add(new EffectCandidate(effect, ctx, owner, base, snapshotStatuses(owner, now), order));
+                } else {
+                    for (UUID target : targets) {
+                        candidates.add(new EffectCandidate(effect, ctx, target, base, snapshotStatuses(target, now), order));
+                    }
+                }
             }
-            // Self-scoped effects (heal_self) run even with no one in range.
-            applyTrigger(card, skill, ctx, owner, owner, base, Set.of(), now, "on_timer");
             fired = true;
         }
+        executePrepared(card, owner, prepareCandidates(candidates, now), now);
         if (fired) {
             eventLog.accept("timer " + card.id());
         }
@@ -471,7 +638,7 @@ public final class EffectEngine {
 
     private void summonMinions(UUID caster, String enemyId, int count) {
         Vec3 center = world.pos(caster);
-        for (int i = 0; i < count; i++) {
+        for (int i = 0; i < Math.min(projectileLimit(), count); i++) {
             double angle = (Math.PI * 2.0 * i) / Math.max(1, count);
             Vec3 spot = new Vec3(center.x() + Math.cos(angle) * 2.5, center.y(), center.z() + Math.sin(angle) * 2.5);
             world.spawnMinion(caster, enemyId, spot);
@@ -480,35 +647,85 @@ public final class EffectEngine {
 
     // ---- internals ----
 
-    private void applyTrigger(WeaponCard card, SkillDef skill, CastContext ctx, UUID attacker,
-            UUID victim, double base, Set<String> preStatuses, long now, String trigger) {
-        int limit = content.vocabulary() != null ? content.vocabulary().maxChainDepth() : 3;
-        if (ctx.chainDepth() > limit + ctx.mods().chainBonus()) {
-            return;
+    /** Optional diagnostic stream. No trace objects are allocated until a consumer opts in. */
+    public record EffectTrace(long tick, String trigger, String skill, String source, String id,
+            int priority, UUID owner, UUID target, int depth, Set<String> history) {
+        public EffectTrace { history = Set.copyOf(history); }
+    }
+    private java.util.function.Consumer<EffectTrace> effectTraceListener;
+    public void setEffectTraceListener(java.util.function.Consumer<EffectTrace> listener) {
+        effectTraceListener = listener;
+    }
+
+    private record EffectCandidate(EffectDef effect, CastContext context, UUID victim,
+            double base, Set<String> statuses, EffectOrder.Key order) { }
+
+    private record PreparedEffect(EffectDef effect, CastContext context, UUID victim,
+            double base, Set<String> statuses, EffectOrder.Key order) { }
+
+    private void collectTrigger(List<EffectCandidate> candidates, SkillDef skill, CastContext ctx, UUID victim,
+            double base, Set<String> pre, String trigger) {
+        for (int index = 0; index < skill.effects().size(); index++) {
+            EffectDef effect = skill.effects().get(index);
+            if (effect.trigger().equals(trigger)) {
+                candidates.add(new EffectCandidate(effect, ctx, victim, base, pre,
+                        EffectOrder.key(effect, ctx.skillId(), index)));
+            }
         }
+    }
+
+    private List<PreparedEffect> prepareTrigger(SkillDef skill, CastContext ctx, UUID victim,
+            double base, Set<String> pre, long now, String trigger) {
+        List<EffectCandidate> candidates = new ArrayList<>();
+        collectTrigger(candidates, skill, ctx, victim, base, pre, trigger);
+        return prepareCandidates(candidates, now);
+    }
+
+    /** Sort before budget admission and chance rolls; execute only after every admitted condition is evaluated. */
+    private List<PreparedEffect> prepareCandidates(List<EffectCandidate> candidates, long now) {
+        List<PreparedEffect> prepared = new ArrayList<>();
+        refreshBudget();
+        if (eventDepth >= maxEventDepth()) return prepared;
+        candidates.sort(java.util.Comparator.comparing(EffectCandidate::order, EffectOrder.COMPARATOR)
+                .thenComparing(EffectCandidate::victim));
+        for (EffectCandidate candidate : candidates) {
+            if (effectsThisTick >= executionLimits.effectsPerTick()) break;
+            EffectDef e = candidate.effect();
+            CastContext ctx = candidate.context();
+            if (ctx.chainDepth() > chainLimit()) continue;
+            maximumObservedChainDepth = Math.max(maximumObservedChainDepth, ctx.chainDepth());
+            int limit = Math.min(chainLimit(), Math.max(0, e.maxChainDepth()) + Math.max(0, ctx.mods().chainBonus()));
+            if (ctx.chainDepth() > limit || e.preventRecursive().stream().anyMatch(ctx.preventRecursive()::contains)) continue;
+            List<UUID> targets = e.scope().equals("area")
+                    ? world.targetsInArc(ctx.owner(), e.radius() > 0 ? e.radius() : 6.0, -1.0).stream().distinct().sorted().toList()
+                    : List.of(candidate.victim());
+            for (UUID target : targets) {
+                if (effectsThisTick >= executionLimits.effectsPerTick()) break;
+                effectsThisTick++;
+                Set<String> pre = target.equals(candidate.victim()) ? candidate.statuses() : snapshotStatuses(target, now);
+                if (conditionsMet(e, ctx.owner(), target, pre)) {
+                    prepared.add(new PreparedEffect(e, ctx, target, candidate.base(), Set.copyOf(pre), candidate.order()));
+                }
+            }
+        }
+        return prepared;
+    }
+
+    private void executePrepared(WeaponCard card, UUID attacker, List<PreparedEffect> effects, long now) {
         if (!enterEvent()) {
             return;
         }
         try {
-            for (EffectDef e : skill.effects()) {
-                if (!e.trigger().equals(trigger)) {
-                    continue;
+            for (PreparedEffect p : effects) {
+                if (executedActionsThisTick() >= executionLimits.actionsPerTick()) {
+                    break;
                 }
-                if (e.scope().equals("area")) {
-                    double radius = e.radius() > 0 ? e.radius() : 6.0;
-                    for (UUID target : world.targetsInArc(ctx.owner(), radius, -1.0)) {
-                        Set<String> pre = snapshotStatuses(target, now);
-                        if (!conditionsMet(e, ctx.owner(), target, pre)) {
-                            continue;
-                        }
-                        runActions(e, card, ctx, attacker, target, base, pre, now);
-                    }
-                    continue;
+                if (effectTraceListener != null) {
+                    effectTraceListener.accept(new EffectTrace(now, p.effect().trigger(), p.context().skillId(),
+                            p.order().source(), p.order().id(), p.order().priority(), p.context().owner(), p.victim(),
+                            p.context().chainDepth(), p.context().preventRecursive()));
                 }
-                if (!conditionsMet(e, ctx.owner(), victim, preStatuses)) {
-                    continue;
-                }
-                runActions(e, card, ctx, attacker, victim, base, preStatuses, now);
+                runActions(p.effect(), card, p.context(), attacker, p.victim(), p.base(), p.statuses(), p.order(), now);
             }
         } finally {
             exitEvent();
@@ -517,11 +734,17 @@ public final class EffectEngine {
 
     /** Runs one effect's actions; delay defers the remaining tail. */
     private void runActions(EffectDef e, WeaponCard card, CastContext ctx, UUID attacker,
-            UUID victim, double base, Set<String> preStatuses, long now) {
+            UUID victim, double base, Set<String> preStatuses, EffectOrder.Key order, long now) {
         List<ActionDef> acts = e.actions();
         for (int i = 0; i < acts.size(); i++) {
+            if (executedActionsThisTick() >= executionLimits.actionsPerTick()) {
+                return;
+            }
             ActionDef a = acts.get(i);
             if (a.type().equals("delay")) {
+                if (!takeAction()) {
+                    return;
+                }
                 List<ActionDef> tail = List.copyOf(acts.subList(i + 1, acts.size()));
                 if (tail.stream().anyMatch(t -> t.type().equals("delay"))) {
                     eventLog.accept("delay skips nested delay");
@@ -532,10 +755,13 @@ public final class EffectEngine {
                     ticks = 20;
                 }
                 Set<String> pre = new HashSet<>(preStatuses);
-                schedule(ticks, () -> runTail(tail, card, ctx, attacker, victim, base, pre, now));
+                scheduleContinuation(ticks, ctx.owner(), order, () -> runTail(tail, card, ctx, attacker, victim, base, pre, world.gameTime()));
                 return;
             }
             if (a.type().equals("repeat")) {
+                if (!takeAction()) {
+                    return;
+                }
                 List<ActionDef> head = new ArrayList<>();
                 for (int j = 0; j < i; j++) {
                     String t = acts.get(j).type();
@@ -543,15 +769,18 @@ public final class EffectEngine {
                         head.add(acts.get(j));
                     }
                 }
-                int times = Math.max(1, a.count());
+                int times = Math.max(1, Math.min(projectileLimit(), a.count()));
                 long interval = (long) evalAmount(a, ctx.owner(), victim, base);
                 if (interval <= 0) {
                     interval = 10;
                 }
                 for (int k = 1; k < times; k++) {
-                    schedule(interval * k,
+                    long delay = interval > Long.MAX_VALUE / k ? Long.MAX_VALUE : interval * k;
+                    if (scheduleContinuation(delay, ctx.owner(), order,
                             () -> runTail(head, card, ctx, attacker, victim, base,
-                                    new HashSet<>(preStatuses), now));
+                                    new HashSet<>(preStatuses), world.gameTime())) == null) {
+                        break;
+                    }
                 }
                 continue;
             }
@@ -566,6 +795,9 @@ public final class EffectEngine {
         }
         try {
             for (ActionDef a : tail) {
+                if (executedActionsThisTick() >= executionLimits.actionsPerTick()) {
+                    break;
+                }
                 runAction(a, card, ctx, attacker, victim, base, now);
             }
         } finally {
@@ -575,9 +807,12 @@ public final class EffectEngine {
 
     private void runAction(ActionDef a, WeaponCard card, CastContext ctx, UUID attacker,
             UUID victim, double base, long now) {
+        if (!takeAction()) {
+            return;
+        }
         switch (a.type()) {
             case "spawn_projectiles" -> {
-                if (ctx.preventRecursive().contains(a.type())) {
+                if (ctx.chainDepth() >= chainLimit() || ctx.preventRecursive().contains(a.type())) {
                     break;
                 }
                 fireSplit(ctx, attacker, victim, a, base, now);
@@ -585,6 +820,21 @@ public final class EffectEngine {
             case "dash" -> dashMove(ctx.owner(), a.distance() > 0 ? a.distance() : 6.0);
             case "heal_self" ->
                 world.healEntity(ctx.owner(), evalAmount(a, ctx.owner(), victim, base));
+            case "grant_shield" -> shields.grant(ctx.owner(), a.amount(), a.durationTicks(), world.gameTime());
+            case "heal_with_shield" -> {
+                if (!Double.isFinite(a.amount()) || a.amount() <= 0 || !Double.isFinite(a.shieldRatio())
+                        || a.shieldRatio() < 0 || a.shieldRatio() > 1 || a.durationTicks() <= 0) {
+                    break;
+                }
+                double total = Math.min(a.amount(), content.vocabulary().combatLimits().maxShieldAmount());
+                shields.grant(ctx.owner(), total * a.shieldRatio(), a.durationTicks(), world.gameTime());
+                double healing = total * (1 - a.shieldRatio());
+                if (healing > 0) {
+                    world.healEntity(ctx.owner(), healing);
+                }
+            }
+            case "reduce_next_cast" -> reduceNextCast(ctx.owner(), card, a);
+            case "reduce_cooldown" -> reduceCooldown(ctx.owner(), card, a.ref(), ctx.mods(), a.amount());
             case "apply_status" -> {
                 String status = a.status() != null ? a.status() : "";
                 if (!status.isEmpty()) {
@@ -617,8 +867,9 @@ public final class EffectEngine {
                 eventLog.accept("knockback");
             }
             case "strike" -> {
+                if (ctx.chainDepth() >= chainLimit()) break;
                 double mult = a.damageMult() > 0 ? a.damageMult() : 1.0;
-                world.dealDamage(ctx.owner(), victim, base * mult, DamageKind.MELEE, null);
+                world.dealDamage(ctx.owner(), victim, base * mult, DamageKind.MELEE, null, ctx.causedBy("strike"));
                 eventLog.accept("strike");
             }
             case "ignite" -> {
@@ -652,13 +903,15 @@ public final class EffectEngine {
                 }
             }
             case "lightning" -> {
+                if (ctx.chainDepth() >= chainLimit()) break;
                 double mult = a.damageMult() > 0 ? a.damageMult() : 1.0;
-                world.strikeLightning(ctx.owner(), victim, base * mult);
+                world.strikeLightning(ctx.owner(), victim, base * mult, ctx.causedBy("lightning"));
                 eventLog.accept("lightning");
             }
             case "explosion" -> {
+                if (ctx.chainDepth() >= chainLimit()) break;
                 double power = a.damageMult() > 0 ? a.damageMult() : 2.0;
-                world.explode(ctx.owner(), world.pos(victim), power);
+                world.explode(ctx.owner(), world.pos(victim), power, ctx.causedBy("explosion"));
                 eventLog.accept("explosion");
             }
             case "particles" -> {
@@ -712,17 +965,19 @@ public final class EffectEngine {
             }
             case "cast" -> {
                 if (a.ref() != null && !a.ref().isEmpty()
+                        && ctx.chainDepth() < chainLimit()
                         && card.skills().containsKey(a.ref())
                         && !ctx.preventRecursive().contains("cast:" + a.ref())) {
                     Set<String> prevent = new HashSet<>(ctx.preventRecursive());
                     prevent.add("cast:" + a.ref());
-                    CastContext child = new CastContext(ctx.skillId(), ctx.chainDepth() + 1,
-                            prevent, ctx.owner(), ctx.damageMult(), ctx.mods());
+                    prevent.add("cast");
+                    CastContext child = new CastContext(card.id() + ":" + a.ref(), ctx.chainDepth() + 1,
+                            prevent, ctx.owner(), ctx.damageMult(), ctx.mods(), ctx.snapshot());
                     castChild(card, a.ref(), child);
                 }
             }
             case "missile" -> {
-                if (ctx.preventRecursive().contains("missile")) {
+                if (ctx.chainDepth() >= chainLimit() || ctx.preventRecursive().contains("missile")) {
                     break;
                 }
                 fireMissile(ctx, attacker, victim, a, base, now);
@@ -760,6 +1015,7 @@ public final class EffectEngine {
                 }
             }
             case "dash" -> dashMove(child.owner(), modDouble(skill, "distance", 6.0));
+            case "self_buff" -> { /* Effects run in the direct, paid on_cast event only. */ }
             default -> {
             }
         }
@@ -779,7 +1035,7 @@ public final class EffectEngine {
         double radius = a.radius() > 0 ? a.radius() : 6.0;
         Vec3 origin = world.pos(victim);
         int spawned = 0;
-        for (int i = 0; i < a.count(); i++) {
+        for (int i = 0; i < Math.min(projectileLimit(), a.count()); i++) {
             Vec3 aim;
             if (a.target().equals("attacker") && attacker != null && !attacker.equals(victim)) {
                 aim = world.directionTo(victim, attacker);
@@ -817,7 +1073,7 @@ public final class EffectEngine {
             lifetime = 100;
         }
         int spawned = 0;
-        for (int i = 0; i < a.count(); i++) {
+        for (int i = 0; i < Math.min(projectileLimit(), a.count()); i++) {
             UUID lock;
             Vec3 aim;
             if (a.target().equals("attacker") && attacker != null && !attacker.equals(victim)) {
@@ -853,6 +1109,11 @@ public final class EffectEngine {
     private boolean conditionsMet(EffectDef e, UUID owner, UUID victim, Set<String> preStatuses) {
         for (ConditionDef c : e.conditions()) {
             switch (c.type()) {
+                case "self_has_shield" -> {
+                    if (shieldAmount(owner) <= 0) {
+                        return false;
+                    }
+                }
                 case "target_has_status" -> {
                     if (c.status() == null || !preStatuses.contains(c.status())) {
                         return false;
@@ -950,7 +1211,8 @@ public final class EffectEngine {
     private record Resolved(WeaponCard card, SkillDef skill) {
     }
 
-    private Resolved resolve(String ctxSkillId) {
+    private Resolved resolve(CastContext context) {
+        String ctxSkillId = context.skillId();
         // Split at the last colon: "<weaponId>:<slot>". Weapon ids contain colons too.
         int last = ctxSkillId.lastIndexOf(':');
         if (last <= 0) {
@@ -958,7 +1220,7 @@ public final class EffectEngine {
         }
         String weaponId = ctxSkillId.substring(0, last);
         String slot = ctxSkillId.substring(last + 1);
-        WeaponCard card = content.weapons().get(weaponId);
+        WeaponCard card = context.snapshot() != null ? context.snapshot() : content.weapons().get(weaponId);
         if (card != null && card.skills().get(slot) != null) {
             return new Resolved(card, card.skills().get(slot));
         }
@@ -971,5 +1233,7 @@ public final class EffectEngine {
 
     public void cleanup(long now) {
         statuses.cleanup(now);
+        shields.cleanup(now);
+        castBoosts.values().removeIf(boost -> boost.expires() <= now);
     }
 }

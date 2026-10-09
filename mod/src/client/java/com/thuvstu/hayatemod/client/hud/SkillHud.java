@@ -23,6 +23,26 @@ public final class SkillHud {
         if (client.player == null || client.options.hideGui) {
             return;
         }
+        if (HudState.shield() > 0) {
+            context.drawString(client.font, "シールド " + (int) HudState.shield()
+                            + " [" + String.format("%.1f", HudState.shieldTicks() / 20.0) + "s]",
+                    4, context.guiHeight() - 42, 0x88DDFF, false);
+        }
+        context.drawString(client.font, "MP " + (int) HudState.mana() + "/100  ST " + (int) HudState.stamina() + "/100",
+                4, context.guiHeight() - 72, 0xAACCFF, false);
+        if (HudState.heavyTotal() > 0) {
+            context.drawString(client.font, "Shift+右クリック " + (HudState.heavyLeft() > 0
+                    ? String.format("%.1fs", HudState.heavyLeft() / 20.0) : "READY"),
+                    4, context.guiHeight() - 57, 0xCCCCCC, false);
+        }
+        var cast = HudState.casting();
+        if (cast != null && !cast.slot().isEmpty() && cast.total() > 0) {
+            context.drawString(client.font, "詠唱 " + cast.slot() + " " + String.format("%.1fs", cast.remaining() / 20.0)
+                    + " [Shift+G:中断]", 4, context.guiHeight() - 94, 0xFFCC66, false);
+            int filled = (int) (120 * Math.clamp(1.0 - (double) cast.remaining() / cast.total(), 0.0, 1.0));
+            context.fill(4, context.guiHeight() - 84, 124, context.guiHeight() - 82, 0xFF333333);
+            context.fill(4, context.guiHeight() - 84, 4 + filled, context.guiHeight() - 82, 0xFFFFCC66);
+        }
         Skill skill = HudState.skill();
         if (skill == null) {
             return;

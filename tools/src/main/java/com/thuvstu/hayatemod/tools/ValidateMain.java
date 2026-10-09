@@ -4,12 +4,8 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.thuvstu.hayatemod.core.content.ContentPack;
-import com.thuvstu.hayatemod.core.content.ContentSet;
-import com.thuvstu.hayatemod.core.describe.Describer;
-import com.thuvstu.hayatemod.core.describe.MissingTemplateException;
+import com.thuvstu.hayatemod.core.content.ContentPipeline;
 import com.thuvstu.hayatemod.core.validate.Issue;
-import com.thuvstu.hayatemod.core.validate.Validator;
 
 /**
  * {@code validateContent}: loader errors + validator issues + description-template
@@ -24,16 +20,12 @@ public final class ValidateMain {
             System.err.println("usage: validateContent <contentDir>");
             System.exit(2);
         }
-        ContentPack.LoadedPack pack = ContentPack.load(Path.of(args[0]));
+        ContentPipeline.Result pack = ContentPipeline.load(Path.of(args[0]));
         List<String> loaderErrors = new ArrayList<>();
-        for (var e : pack.errors()) {
+        for (var e : pack.loaderErrors()) {
             loaderErrors.add("[LOAD-ERROR] " + e);
         }
-        List<Issue> issues = new ArrayList<>();
-        if (pack.ok()) {
-            issues.addAll(Validator.validate(pack.set()));
-            issues.addAll(describeDryRun(pack.set()));
-        }
+        List<Issue> issues = pack.issues();
         for (String s : loaderErrors) {
             System.out.println(s);
         }
@@ -49,29 +41,4 @@ public final class ValidateMain {
         }
     }
 
-    static List<Issue> describeDryRun(ContentSet set) {
-        List<Issue> out = new ArrayList<>();
-        for (var w : set.weapons().values()) {
-            try {
-                Describer.describeWeapon(w);
-            } catch (MissingTemplateException e) {
-                out.add(new Issue(Issue.Severity.ERROR, "V10", "weapons:" + w.id(), e.getMessage()));
-            }
-        }
-        for (var r : set.runes().values()) {
-            try {
-                Describer.describeRune(r);
-            } catch (MissingTemplateException e) {
-                out.add(new Issue(Issue.Severity.ERROR, "V10", "runes:" + r.id(), e.getMessage()));
-            }
-        }
-        for (var k : set.keystones().values()) {
-            try {
-                Describer.describeKeystone(k);
-            } catch (MissingTemplateException e) {
-                out.add(new Issue(Issue.Severity.ERROR, "V10", "keystones:" + k.id(), e.getMessage()));
-            }
-        }
-        return out;
-    }
 }

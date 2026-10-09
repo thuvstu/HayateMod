@@ -17,7 +17,20 @@ public final class Models {
     }
 
     public record EffectDef(String trigger, List<ConditionDef> conditions, List<ActionDef> actions,
-            List<String> preventRecursive, int maxChainDepth, String scope, double radius) {
+            List<String> preventRecursive, int maxChainDepth, String scope, double radius,
+            String id, String source, int priority) {
+        public EffectDef {
+            id = id == null ? "" : id;
+            source = source == null ? "" : source;
+        }
+        public EffectDef(String trigger, List<ConditionDef> conditions, List<ActionDef> actions,
+                List<String> preventRecursive, int maxChainDepth, String scope, double radius) {
+            this(trigger, conditions, actions, preventRecursive, maxChainDepth, scope, radius, "", "", 0);
+        }
+        public EffectDef identified(String origin, String fallbackId) {
+            return new EffectDef(trigger, conditions, actions, preventRecursive, maxChainDepth, scope, radius,
+                    id.isEmpty() ? fallbackId : id, origin, priority);
+        }
     }
 
     public record ConditionDef(String type, String status, double value, String name, double max) {
@@ -25,7 +38,14 @@ public final class Models {
 
     public record ActionDef(String type, int count, double damageMult, String target, double radius,
             List<String> inheritTags, double distance, double amount, String status, String effect,
-            String ref, String formula) {
+            String ref, String formula, int durationTicks, double shieldRatio) {
+        /** Compatibility for existing actions and generated cards that have no shield parameters. */
+        public ActionDef(String type, int count, double damageMult, String target, double radius,
+                List<String> inheritTags, double distance, double amount, String status, String effect,
+                String ref, String formula) {
+            this(type, count, damageMult, target, radius, inheritTags, distance, amount, status, effect,
+                    ref, formula, 0, 0);
+        }
     }
 
     public record EnemyData(String id, String name, int level, String rank, String species,
@@ -76,7 +96,27 @@ public final class Models {
 
     public record Vocabulary(Set<String> cores, Set<String> triggers, Set<String> conditions,
             Set<String> actions, Set<String> statuses, Set<String> elements, Set<String> signals,
-            Set<String> tagNamespaces, int maxChainDepth, int maxProjectiles, double maxRadius) {
+            Set<String> tagNamespaces, int maxChainDepth, int maxProjectiles, double maxRadius,
+            ExecutionLimits executionLimits, CombatLimits combatLimits, CastingLimits castingLimits) {
+    }
+
+    public record CastingLimits(double maxCastSeconds, int maxBoostDurationTicks) {
+        public static CastingLimits defaults() { return new CastingLimits(30, 1200); }
+    }
+
+    /** Pack-configurable runtime budgets; defaults retain compatibility with older packs. */
+    public record ExecutionLimits(int effectsPerTick, int actionsPerTick, int tasksPerTick, int pendingTasks) {
+        public static ExecutionLimits defaults() {
+            return new ExecutionLimits(256, 512, 128, 1024);
+        }
+    }
+
+    /** Recovery/shield amounts are RPG HP units, not percentages of max health. */
+    public record CombatLimits(double maxShieldAmount, int maxShieldDurationTicks,
+            double maxCooldownReductionSeconds) {
+        public static CombatLimits defaults() {
+            return new CombatLimits(200, 1200, 30);
+        }
     }
 
     public record ReferenceEntry(int level, double hp, double dps, double mit, double hps) {
@@ -143,6 +183,21 @@ public final class Models {
         }
     }
 
-    public record Ruleset(String id, boolean extendsGlobal) {
+    /** Null fields inherit the previous layer; overrides replace, never multiply twice. */
+    public record RulePatch(Double hp, Double dps, Double pity, Double materials) {
+        public static RulePatch empty() { return new RulePatch(null, null, null, null); }
+    }
+
+    public record TagRule(String tag, RulePatch patch) { }
+
+    public record Ruleset(String id, boolean extendsGlobal, RulePatch defaults,
+            List<TagRule> tagOverrides, Map<String, RulePatch> byId) {
+        public Ruleset {
+            tagOverrides = List.copyOf(tagOverrides);
+            byId = Map.copyOf(byId);
+        }
+        public Ruleset(String id, boolean extendsGlobal) {
+            this(id, extendsGlobal, RulePatch.empty(), List.of(), Map.of());
+        }
     }
 }

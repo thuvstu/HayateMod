@@ -32,6 +32,11 @@ public interface WorldAdapter {
      */
     void dealDamage(UUID attacker, UUID target, double amount, DamageKind kind, UUID direct);
 
+    /** Context-aware bridge; legacy/simulation adapters may opt out of synchronous reentry. */
+    default void dealDamage(UUID attacker, UUID target, double amount, DamageKind kind, UUID direct, CastContext context) {
+        dealDamage(attacker, target, amount, kind, direct);
+    }
+
     /** Direction from origin toward the nearest damageable entity within radius, or null. */
     Vec3 aimAtNearest(UUID owner, Vec3 origin, double radius, UUID exclude);
 
@@ -106,9 +111,15 @@ public interface WorldAdapter {
 
     /** Visual-only lightning strike dealing direct damage around the target. */
     void strikeLightning(UUID owner, UUID target, double damage);
+    default void strikeLightning(UUID owner, UUID target, double damage, CastContext context) {
+        strikeLightning(owner, target, damage);
+    }
 
     /** Explosion without block damage. Power is clamped by the game. */
     void explode(UUID owner, Vec3 pos, double power);
+    default void explode(UUID owner, Vec3 pos, double power, CastContext context) {
+        explode(owner, pos, power);
+    }
 
     /** Weapon id held in the main hand ("" when none). */
     String heldWeaponId(UUID entity);
