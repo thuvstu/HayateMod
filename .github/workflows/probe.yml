@@ -218,19 +218,24 @@ jobs:
           echo "--- done ---"
           ls -la
 
-      - name: emit creative tab and item usage api as annotations
+      - name: emit armour api as annotations
         run: |
           set +e
           cd ci-out
-          javap -cp client.jar net.minecraft.world.item.CreativeModeTabs > tabs.txt 2>&1
-          grep -oE "[A-Z][A-Z_0-9]{3,};" tabs.txt | sort -u | tr '\n' ' ' > tabs_fields.txt
-          echo "::notice title=tabs:fields::$(head -c 2500 tabs_fields.txt)"
-          echo "::notice title=tabs:lang::$(unzip -p client.jar assets/minecraft/lang/en_us.json 2>/dev/null | grep -oE '\"itemGroup\.[a-z_0-9]+\"' | sort -u | tr '\n' ' ' | head -c 1500)"
-          echo "::notice title=javap:properties::$(javap -cp client.jar 'net.minecraft.world.item.Item$Properties' 2>&1 | grep -oE 'Properties (sword|pickaxe|axe|shovel|hoe|durability|component|stacksTo)\(.*' | tr '\n' '~' | head -c 1500)"
-          echo "::notice title=javap:itemstack::$(javap -cp client.jar net.minecraft.world.item.ItemStack 2>&1 | grep -oE 'hurtAndBreak\(.*' | tr '\n' '~' | head -c 900)"
-          echo "::notice title=javap:living::$(javap -cp client.jar net.minecraft.world.entity.LivingEntity 2>&1 | grep -oE '(getEquipmentSlotForItem|getSlotForItem|resetFallDistance)\(.*' | tr '\n' '~' | head -c 900)"
-          echo "::notice title=javap:level-particles::$(javap -cp client.jar net.minecraft.world.level.Level 2>&1 | grep -oE 'sendParticles\(.*' | tr '\n' '~' | head -c 600)$(javap -cp client.jar net.minecraft.server.level.ServerLevel 2>&1 | grep -oE 'sendParticles\(.*' | tr '\n' '~' | head -c 600)"
-          echo "::notice title=javap:cooldowns::$(javap -cp client.jar net.minecraft.world.item.ItemCooldowns 2>&1 | grep -oE 'addCooldown\(.*' | tr '\n' '~' | head -c 700)"
+          echo "::notice title=javap:EquipmentAsset::$(javap -cp client.jar net.minecraft.world.item.equipment.EquipmentAsset 2>&1 | tr '\n' '~' | tr -s ' ' | head -c 2000)"
+          echo "::notice title=classes:equipment-asset::$(unzip -l client.jar | awk '{print $4}' | grep -E '^net/minecraft/world/item/equipment/EquipmentAsset' | tr '\n' ' ' | head -c 900)"
+          echo "::notice title=javap:Equippable::$(javap -cp client.jar net.minecraft.world.item.equipment.Equippable 2>&1 | tr '\n' '~' | tr -s ' ' | head -c 2200)"
+          echo "::notice title=javap:ArmorType::$(javap -cp client.jar net.minecraft.world.item.equipment.ArmorType 2>&1 | grep -vE '^Compiled' | tr '\n' '~' | tr -s ' ' | head -c 1200)"
+          echo "::notice title=properties:armor::$(javap -cp client.jar 'net.minecraft.world.item.Item$Properties' 2>&1 | grep -iE 'armor|equip|humanoid' | tr '\n' '~' | tr -s ' ' | head -c 1500)"
+          echo "::notice title=javap:attributes::$(javap -cp client.jar net.minecraft.world.item.component.ItemAttributeModifiers 2>&1 | grep -oE '(public|Builder|ItemAttributeModifiers)[^;]*;' | tr '\n' '~' | head -c 1600)"
+
+      - name: dump vanilla armour template textures
+        run: |
+          set +e
+          cd ci-out
+          echo "::notice title=assets:equipment::$(unzip -l client.jar | awk '{print $4}' | grep -E '^assets/minecraft/textures/entity/equipment/' | head -12 | tr '\n' ' ' | head -c 1200)"
+          echo "::notice title=png:iron-humanoid::$(unzip -p client.jar assets/minecraft/textures/entity/equipment/humanoid/iron.png 2>/dev/null | base64 -w0 | head -c 3200)"
+          echo "::notice title=png:iron-leggings::$(unzip -p client.jar assets/minecraft/textures/entity/equipment/humanoid_leggings/iron.png 2>/dev/null | base64 -w0 | head -c 3200)"
 
       - name: upload artifact
         uses: actions/upload-artifact@v7
