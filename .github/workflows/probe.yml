@@ -218,28 +218,35 @@ jobs:
           echo "--- done ---"
           ls -la
 
-      - name: emit mob, structure and enchantment signatures
+      - name: emit entity api signatures
         run: |
           set +e
           cd ci-out
           CP="client.jar"
           one () { tr '\n' '~' | tr -s ' ' | head -c "$1"; }
-          echo "::notice title=json:ench-knockback::$(unzip -p client.jar data/minecraft/enchantment/knockback.json 2>&1 | tr -d '\n' | tr -s ' ' | one 1100)"
-          echo "::notice title=json:ench-sweeping::$(unzip -p client.jar data/minecraft/enchantment/sweeping.json 2>&1 | tr -d '\n' | tr -s ' ' | one 1300)"
-          echo "::notice title=json:ench-featherfall::$(unzip -p client.jar data/minecraft/enchantment/feather_falling.json 2>&1 | tr -d '\n' | tr -s ' ' | one 1300)"
-          echo "::notice title=json:ench-efficiency::$(unzip -p client.jar data/minecraft/enchantment/efficiency.json 2>&1 | tr -d '\n' | tr -s ' ' | one 1100)"
-          echo "::notice title=json:structure-fossil::$(unzip -p client.jar data/minecraft/worldgen/structure/nether_fossil.json 2>&1 | tr -d '\n' | tr -s ' ' | one 1300)"
-          echo "::notice title=json:pool-fossil::$(unzip -p client.jar data/minecraft/worldgen/template_pool/nether_fossil/start.json 2>&1 | tr -d '\n' | tr -s ' ' | one 1300)"
-          echo "::notice title=json:set-nether::$(unzip -p client.jar data/minecraft/worldgen/structure_set/nether_complexes.json 2>&1 | tr -d '\n' | tr -s ' ' | one 1200)"
-          echo "::notice title=files:structure-nbt::$(unzip -l client.jar | awk '{print $4}' | grep -E '^data/minecraft/structures/' | head -10 | tr '\n' ' ' | one 800) DV=$(javap -constants -cp $CP net.minecraft.SharedConstants 2>&1 | grep -iE 'DATA_VERSION|WORLD_VERSION' | one 700)"
-          echo "::notice title=javap:render-state::$(javap -cp $CP net.minecraft.client.renderer.entity.state.LivingEntityRenderState 2>&1 | grep -E 'abstract|public|float|int|boolean' | one 1600)"
-          echo "::notice title=javap:EntityRenderState::$(javap -cp $CP net.minecraft.client.renderer.entity.state.EntityRenderState 2>&1 | grep -E 'public' | one 1100)"
-          echo "::notice title=javap:Attributes::$(javap -cp $CP net.minecraft.world.entity.ai.attributes.Attributes 2>&1 | grep -iE 'FLYING_SPEED|MOVEMENT_SPEED|MAX_HEALTH|ATTACK|FOLLOW_RANGE' | one 1200)"
+          echo "::notice title=javap:Attributes::$(javap -cp $CP net.minecraft.world.entity.ai.attributes.Attributes 2>&1 | grep -iE 'FLYING_SPEED|MOVEMENT_SPEED|MAX_HEALTH|ATTACK|FOLLOW_RANGE|ARMOR' | one 1200)"
           echo "::notice title=javap:geom-more::POSE=$(javap -cp $CP net.minecraft.client.model.geom.PartPose 2>&1 | grep -E 'public static' | one 600) LAYER=$(javap -cp $CP net.minecraft.client.model.geom.LayerDefinition 2>&1 | grep -E 'public static' | one 600) DEFORM=$(javap -cp $CP net.minecraft.client.model.geom.builders.CubeDeformation 2>&1 | grep -E 'public' | one 400)"
-          echo "::notice title=javap:ModelLayers::$(javap -cp $CP net.minecraft.client.model.geom.ModelLayers 2>&1 | grep -E 'register|create|public static final net.minecraft.resources.ResourceKey' | one 1100)"
+          echo "::notice title=javap:ModelLayers::$(javap -cp $CP net.minecraft.client.model.geom.ModelLayers 2>&1 | grep -E 'register\(|create\(|public static final net.minecraft.client.model.geom.ModelLayerLocation' | one 1200)"
+          echo "::notice title=javap:Model-abstract::$(javap -cp $CP net.minecraft.client.model.Model 2>&1 | one 1200)"
+          echo "::notice title=javap:RendererContext::$(javap -cp $CP 'net.minecraft.client.renderer.entity.EntityRendererProvider$Context' 2>&1 | grep -E 'public' | one 1200)"
           echo "::notice title=javap:FlyingMob::$(javap -cp $CP net.minecraft.world.entity.FlyingMob 2>&1 | grep -E 'public|protected' | one 1100) ~~ MONSTER=$(javap -cp $CP net.minecraft.world.entity.monster.Monster 2>&1 | grep -E 'public' | one 900)"
-          echo "::notice title=javap:PathfinderMob::$(javap -cp $CP net.minecraft.world.entity.PathfinderMob 2>&1 | grep -E 'public|protected' | one 1500)"
-          echo "::notice title=javap:register-entity::$(javap -cp $CP net.minecraft.core.registries.BuiltInRegistries 2>&1 | grep -iE 'ENTITY_TYPE|Registry<' | one 1200)"
+          echo "::notice title=javap:Mob::$(javap -cp $CP net.minecraft.world.entity.Mob 2>&1 | grep -E 'goalSelector|targetSelector|public|protected' | one 1400)"
+          echo "::notice title=javap:GoalSelector::$(javap -cp $CP net.minecraft.world.entity.ai.goal.GoalSelector 2>&1 | grep -E 'public' | one 700) ~~ GOAL=$(javap -cp $CP net.minecraft.world.entity.ai.goal.Goal 2>&1 | grep -E 'public|protected|abstract' | one 900)"
+          echo "::notice title=javap:SpawnPlacements::$(javap -cp $CP net.minecraft.world.level.levelgen.SpawnPlacements 2>&1 | grep -E 'public' | one 900) ~~ TYPES=$(javap -cp $CP net.minecraft.world.entity.SpawnPlacementTypes 2>&1 | grep -E 'public static' | one 700)"
+          echo "::notice title=javap:MobCategory::$(javap -cp $CP net.minecraft.world.entity.MobCategory 2>&1 | grep -E 'public static' | one 700)"
+
+      - name: emit structure json signatures
+        run: |
+          set +e
+          cd ci-out
+          one () { tr '\n' '~' | tr -s ' ' | head -c "$1"; }
+          echo "::notice title=json:structure-endcity::$(unzip -p client.jar data/minecraft/worldgen/structure/end_city.json 2>&1 | tr -d '\n' | tr -s ' ' | one 1300)"
+          echo "::notice title=json:pool-endcity::$(unzip -p client.jar data/minecraft/worldgen/template_pool/end_city/base_plates.json 2>&1 | tr -d '\n' | tr -s ' ' | one 1300)"
+          echo "::notice title=json:set-endcity::$(unzip -p client.jar data/minecraft/worldgen/structure_set/end_cities.json 2>&1 | tr -d '\n' | tr -s ' ' | one 1200)"
+          echo "::notice title=json:structure-village::$(unzip -p client.jar data/minecraft/worldgen/structure/village_plains.json 2>&1 | tr -d '\n' | tr -s ' ' | one 1300)"
+          echo "::notice title=json:pool-village::$(unzip -p client.jar data/minecraft/worldgen/template_pool/village/plains/terminators.json 2>&1 | tr -d '\n' | tr -s ' ' | one 1200)"
+          echo "::notice title=json:processor-list::$(unzip -p client.jar data/minecraft/worldgen/processor_list/end_city_general.json 2>&1 | tr -d '\n' | tr -s ' ' | one 1200)"
+          echo "::notice title=files:structure-nbt::$(unzip -l client.jar | awk '{print $4}' | grep -E '^data/minecraft/structures/.*\.nbt$' | head -8 | tr '\n' ' ' | one 800)"
 
       - name: upload artifact
         uses: actions/upload-artifact@v7

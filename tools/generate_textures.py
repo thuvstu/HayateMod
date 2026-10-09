@@ -432,6 +432,44 @@ def gale_staff() -> Canvas:
 	return c
 
 
+def gale_fan() -> Canvas:
+	"""A folding fan, held open along the item diagonal: ribs from a gold pivot."""
+	c = Canvas(16)
+	import math
+	pivot_x, pivot_y = 3.0, 13.0
+	axis = 0.785          # the fan opens along the bottom-left -> top-right diagonal
+	spread = 0.60         # half angle of the open leaf
+	inner, outer = 1.7, 11.6
+	rib_step = 0.30
+	for y in range(16):
+		for x in range(16):
+			dx, dy = x - pivot_x, y - pivot_y
+			r = math.hypot(dx, dy)
+			if r < 1.7:
+				c.set(x, y, GOLD if r < 1.2 else GOLD_DARK)
+				continue
+			if r > outer:
+				continue
+			angle = math.atan2(dx, -dy) - axis
+			if abs(angle) > spread:
+				continue
+			# the two outer guards are solid, the leaf between the ribs is gale cyan
+			if abs(angle) > spread - 0.085:
+				c.set(x, y, METAL_EDGE)
+			elif abs(angle) % rib_step < 0.045:
+				c.set(x, y, METAL_DARK)
+			else:
+				t = (r - inner) / (outer - inner)
+				c.set(x, y, mix(PALE, MID, min(1.0, 0.10 + t * 0.55)))
+	for k in range(3, 11):  # highlight sliding along the upper ribs
+		c.set(int(round(pivot_x + k * 0.60)), int(round(pivot_y - k * 0.80)), SHINE)
+	c.set(2, 13, GOLD)
+	c.set(2, 14, GOLD_DARK)
+	c.set(3, 14, GOLD_DARK)
+	c.outline(OUTLINE)
+	return c
+
+
 def greater_gale_charm() -> Canvas:
 	"""An upgraded charm: a heavy ring with a bigger gem and two wind wings."""
 	c = Canvas(16)
@@ -789,6 +827,7 @@ def targets():
 		ASSETS / "textures" / "item" / "gale_orb.png": gale_orb(),
 		ASSETS / "textures" / "item" / "gale_blade.png": gale_blade(),
 		ASSETS / "textures" / "item" / "gale_staff.png": gale_staff(),
+		ASSETS / "textures" / "item" / "gale_fan.png": gale_fan(),
 		ASSETS / "textures" / "item" / "gale_pickaxe.png": gale_pickaxe(),
 		ASSETS / "textures" / "item" / "gale_helmet.png": helmet(),
 		ASSETS / "textures" / "item" / "gale_chestplate.png": chestplate(),
