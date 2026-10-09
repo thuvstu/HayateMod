@@ -99,8 +99,10 @@ class CombatContentTest {
         Path root = copyPack();
         Path file = root.resolve("weapons/echo_reaver.yaml");
         String text = Files.readString(file).replace("ref: special", "ref: heavy");
-        int start = text.indexOf("  heavy:\n");
+        int start = text.indexOf("  heavy:");
+        assertTrue(start >= 0, "heavy slot not found");
         int end = text.indexOf("design_note:", start);
+        assertTrue(end >= 0, "design_note not found");
         Files.writeString(file, text.substring(0, start) + text.substring(end));
         var result = ContentPipeline.load(root);
         assertFalse(result.ok());

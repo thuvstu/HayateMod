@@ -24,9 +24,10 @@ public final class TagDeriver {
 
     public static String deliveryForCore(String core) {
         return switch (core) {
-            case "melee_thrust", "heavy_slam" -> "delivery:melee";
+            case "melee_thrust", "heavy_slam", "dash" -> "delivery:melee";
             case "projectile_single" -> "delivery:projectile";
             case "summon_minions" -> "delivery:summon";
+            case "self_buff" -> "delivery:self";
             default -> "delivery:unknown";
         };
     }
@@ -39,10 +40,23 @@ public final class TagDeriver {
             if (element instanceof String e) {
                 tags.add("element:" + e);
             }
+            if (hasCastTime(skill.mods().get("cast_time"))) {
+                tags.add("utility:casting");
+            }
             for (EffectDef eff : skill.effects()) {
                 for (ActionDef a : eff.actions()) {
-                    if (a.type().equals("spawn_projectiles")) {
-                        tags.add("delivery:projectile");
+                    switch (a.type()) {
+                        case "spawn_projectiles" -> tags.add("delivery:projectile");
+                        case "grant_shield" -> tags.add("utility:shield");
+                        case "heal_self" -> tags.add("utility:healing");
+                        case "heal_with_shield" -> {
+                            tags.add("utility:healing");
+                            tags.add("utility:shield");
+                        }
+                        case "reduce_cooldown" -> tags.add("utility:cooldown");
+                        case "reduce_next_cast" -> tags.add("utility:casting");
+                        default -> {
+                        }
                     }
                 }
                 for (var c : eff.conditions()) {
@@ -53,6 +67,20 @@ public final class TagDeriver {
             }
         }
         return tags;
+    }
+
+    private static boolean hasCastTime(Object value) {
+        if (value instanceof Number n) {
+            return n.doubleValue() > 0;
+        }
+        if (value instanceof String s) {
+            try {
+                return Double.parseDouble(s) > 0;
+            } catch (NumberFormatException ignored) {
+                return false;
+            }
+        }
+        return false;
     }
 
     public static Set<String> buildTags(String jobId, Collection<String> skillCores,
