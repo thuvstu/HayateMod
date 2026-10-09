@@ -319,6 +319,26 @@ jobs:
           echo "::notice title=datapack:enchantment-effects::$(unzip -l client.jar | awk '{print $4}' | grep -E '^data/minecraft/enchantment_effect/' | head -20 | tr '\n' ' ' | head -c 1500)"
           echo "::notice title=datapack:tags-dir::$(unzip -l client.jar | awk '{print $4}' | grep -E '^data/minecraft/tags/' | awk -F/ '{print $4}' | sort -u | tr '\n' ' ' | head -c 1500)"
 
+      - name: dump placed feature and loot table json
+        run: |
+          set +e
+          cd ci-out
+          echo "::notice title=json:placed-ore-coal-lower::$(unzip -p client.jar data/minecraft/worldgen/placed_feature/ore_coal_lower.json 2>&1 | tr -d '\n' | tr -s ' ' | head -c 2500)"
+          echo "::notice title=json:placed-ore-iron::$(unzip -p client.jar data/minecraft/worldgen/placed_feature/ore_iron.json 2>&1 | tr -d '\n' | tr -s ' ' | head -c 2500)"
+          echo "::notice title=json:loot-iron-ore::$(unzip -p client.jar data/minecraft/loot_tables/blocks/iron_ore.json 2>&1 | tr -d '\n' | tr -s ' ' | head -c 2500)"
+          echo "::notice title=json:loot-coal-ore::$(unzip -p client.jar data/minecraft/loot_tables/blocks/coal_ore.json 2>&1 | tr -d '\n' | tr -s ' ' | head -c 2500)"
+          echo "::notice title=json:loot-deepslate-iron-ore::$(unzip -p client.jar data/minecraft/loot_tables/blocks/deepslate_iron_ore.json 2>&1 | tr -d '\n' | tr -s ' ' | head -c 2500)"
+
+      - name: dump enchantment json
+        run: |
+          set +e
+          cd ci-out
+          echo "::notice title=json:enchant-efficiency::$(unzip -p client.jar data/minecraft/enchantment/efficiency.json 2>&1 | tr -d '\n' | tr -s ' ' | head -c 2500)"
+          echo "::notice title=json:enchant-fortune::$(unzip -p client.jar data/minecraft/enchantment/fortune.json 2>&1 | tr -d '\n' | tr -s ' ' | head -c 2500)"
+          echo "::notice title=json:enchant-sweeping::$(unzip -p client.jar data/minecraft/enchantment/sweeping_edge.json 2>&1 | tr -d '\n' | tr -s ' ' | head -c 2000)"
+          echo "::notice title=json:enchant-tags::$(unzip -l client.jar | awk '{print $4}' | grep -E '^data/minecraft/tags/enchantment/' | head -20 | tr '\n' ' ' | head -c 1500)"
+          echo "::notice title=json:enchantable-tags::$(unzip -l client.jar | awk '{print $4}' | grep -E '^data/minecraft/tags/item/enchantable/' | head -20 | tr '\n' ' ' | head -c 1500)"
+
       - name: upload artifact
         uses: actions/upload-artifact@v7
         with:

@@ -10,6 +10,7 @@ import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.CreativeModeTabs;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 
@@ -37,6 +38,13 @@ public final class ModBlocks {
 					.lightLevel(GaleLampBlock::getLuminance)
 					.strength(1.5F));
 
+	/** Overworld ore, mined for {@link com.thuvstu.hayatemod.item.ModItems#GALE_DUST}. */
+	public static final Block GALE_ORE = register(ModBlockItemIds.GALE_ORE, Block::new,
+			BlockBehaviour.Properties.ofFullCopy(Blocks.IRON_ORE));
+
+	public static final Block DEEPSLATE_GALE_ORE = register(ModBlockItemIds.DEEPSLATE_GALE_ORE, Block::new,
+			BlockBehaviour.Properties.ofFullCopy(Blocks.DEEPSLATE_IRON_ORE));
+
 	// ------------------------------------------------------------ plumbing
 
 	/** Registers a block and, because a {@link BlockItemId} is used, its block item too. */
@@ -63,6 +71,8 @@ public final class ModBlocks {
 		CreativeModeTabEvents.modifyOutputEvent(CreativeModeTabs.BUILDING_BLOCKS).register(output -> {
 			output.accept(ModBlocks.GALE_BLOCK);
 			output.accept(ModBlocks.GALE_LAMP);
+			output.accept(ModBlocks.GALE_ORE);
+			output.accept(ModBlocks.DEEPSLATE_GALE_ORE);
 		});
 	}
 }

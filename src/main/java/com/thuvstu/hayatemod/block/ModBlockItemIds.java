@@ -16,6 +16,8 @@ public final class ModBlockItemIds {
 
 	public static final BlockItemId GALE_BLOCK = create("gale_block");
 	public static final BlockItemId GALE_LAMP = create("gale_lamp");
+	public static final BlockItemId GALE_ORE = create("gale_ore");
+	public static final BlockItemId DEEPSLATE_GALE_ORE = create("deepslate_gale_ore");
 
 	private static BlockItemId create(String name) {
 		return BlockItemId.create(HayateMod.id(name), HayateMod.id(name));
