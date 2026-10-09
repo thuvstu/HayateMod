@@ -10,6 +10,7 @@ import net.minecraft.world.level.levelgen.placement.PlacedFeature;
 import net.fabricmc.fabric.api.biome.v1.BiomeModifications;
 import net.fabricmc.fabric.api.biome.v1.BiomeSelectors;
 import net.fabricmc.fabric.api.biome.v1.NetherBiomes;
+import net.fabricmc.fabric.api.biome.v1.TheEndBiomes;
 
 import com.thuvstu.hayatemod.HayateMod;
 
@@ -38,6 +39,10 @@ public final class ModWorldgen {
 	public static final ResourceKey<Biome> GALE_HOLLOW = ResourceKey.create(
 			Registries.BIOME, HayateMod.id("gale_hollow"));
 
+	/** Must match {@code data/hayatemod/worldgen/biome/gale_heights.json}. */
+	public static final ResourceKey<Biome> GALE_HEIGHTS = ResourceKey.create(
+			Registries.BIOME, HayateMod.id("gale_heights"));
+
 	public static void initialize() {
 		BiomeModifications.addFeature(
 				BiomeSelectors.foundInOverworld(),
@@ -48,5 +53,11 @@ public final class ModWorldgen {
 		// (see data/hayatemod/worldgen/biome), only its placement in the nether noise is code.
 		NetherBiomes.addNetherBiome(GALE_HOLLOW,
 				Climate.parameters(0.0F, -0.7F, 0.0F, 0.0F, 0.0F, 0.35F, 0.0F));
+
+		// The Gale Heights: the windiest shelves of the outer End islands. The biome is
+		// data again; the two calls below splice it into the End biome source next to
+		// the vanilla highlands / small islands entries.
+		TheEndBiomes.addHighlandsBiome(GALE_HEIGHTS, 0.6);
+		TheEndBiomes.addSmallIslandsBiome(GALE_HEIGHTS, 0.4);
 	}
 }

@@ -218,57 +218,28 @@ jobs:
           echo "--- done ---"
           ls -la
 
-      - name: emit armour api as annotations
-        run: |
-          set +e
-          cd ci-out
-          echo "::notice title=javap:EquipmentAsset::$(javap -cp client.jar net.minecraft.world.item.equipment.EquipmentAsset 2>&1 | tr '\n' '~' | tr -s ' ' | head -c 2000)"
-          echo "::notice title=classes:equipment-asset::$(unzip -l client.jar | awk '{print $4}' | grep -E '^net/minecraft/world/item/equipment/EquipmentAsset' | tr '\n' ' ' | head -c 900)"
-          echo "::notice title=javap:Equippable::$(javap -cp client.jar net.minecraft.world.item.equipment.Equippable 2>&1 | tr '\n' '~' | tr -s ' ' | head -c 2200)"
-          echo "::notice title=javap:ArmorType::$(javap -cp client.jar net.minecraft.world.item.equipment.ArmorType 2>&1 | grep -vE '^Compiled' | tr '\n' '~' | tr -s ' ' | head -c 1200)"
-          echo "::notice title=properties:armor::$(javap -cp client.jar 'net.minecraft.world.item.Item$Properties' 2>&1 | grep -iE 'armor|equip|humanoid' | tr '\n' '~' | tr -s ' ' | head -c 1500)"
-          echo "::notice title=javap:attributes::$(javap -cp client.jar net.minecraft.world.item.component.ItemAttributeModifiers 2>&1 | grep -oE '(public|Builder|ItemAttributeModifiers)[^;]*;' | tr '\n' '~' | head -c 1600)"
-
-      - name: locate the equipment asset registry
-        run: |
-          set +e
-          cd ci-out
-          echo "::notice title=registries:equipment::REG=$(javap -cp client.jar net.minecraft.core.registries.Registries 2>&1 | grep -i equip | tr '\n' '~' | head -c 600) BUILTIN=$(javap -cp client.jar net.minecraft.core.registries.BuiltInRegistries 2>&1 | grep -i equip | tr '\n' '~' | head -c 600)"
-          echo "::notice title=javap:EquipmentAssets-tail::$(javap -cp client.jar net.minecraft.world.item.equipment.EquipmentAssets 2>&1 | tail -12 | tr '\n' '~' | tr -s ' ' | head -c 1200)"
-          echo "::notice title=javap:AttributeBuilder::$(javap -cp client.jar 'net.minecraft.world.item.component.ItemAttributeModifiers$Builder' 2>&1 | tr '\n' '~' | tr -s ' ' | head -c 1200)"
-          echo "::notice title=javap:AttributeModifier::$(javap -cp client.jar net.minecraft.world.entity.ai.attributes.AttributeModifier 2>&1 | grep -E 'public' | head -10 | tr '\n' '~' | tr -s ' ' | head -c 1000)"
-
       - name: emit mob, structure and enchantment signatures
         run: |
           set +e
           cd ci-out
           CP="client.jar"
           one () { tr '\n' '~' | tr -s ' ' | head -c "$1"; }
-          echo "::notice title=classes:structure::$(unzip -l client.jar | awk '{print $4}' | grep -E '^net/minecraft/world/level/levelgen/structure/[A-Za-z0-9_]+\.class$' | tr '\n' ' ' | one 1800)"
-          echo "::notice title=javap:Structure::$(javap -cp $CP net.minecraft.world.level.levelgen.structure.Structure 2>&1 | grep -E 'public|record' | one 2200)"
-          echo "::notice title=javap:EntityType::$(javap -cp $CP net.minecraft.world.entity.EntityType 2>&1 | grep -E 'public static' | one 2200)"
-          echo "::notice title=javap:EntityTypeBuilder::$(javap -cp $CP 'net.minecraft.world.entity.EntityType$Builder' 2>&1 | grep -E 'public' | one 2200)"
-          echo "::notice title=javap:EntityTypeBuilder-ctor::$(javap -cp $CP 'net.minecraft.world.entity.EntityType$Builder' 2>&1 | grep -E 'Builder\(|of\(|build\(' | one 1500)"
-          echo "::notice title=javap:LivingEntityRenderer::$(javap -cp $CP net.minecraft.client.renderer.entity.LivingEntityRenderer 2>&1 | grep -E 'public|protected' | one 2600)"
-          echo "::notice title=javap:MobRenderer::$(javap -cp $CP net.minecraft.client.renderer.entity.MobRenderer 2>&1 | grep -E 'public|protected' | one 1600)"
-          echo "::notice title=javap:EntityModel::$(javap -cp $CP net.minecraft.client.model.EntityModel 2>&1 | grep -E 'public|abstract' | one 1600) ~~ HIER:$(javap -cp $CP net.minecraft.client.model.HierarchicalModel 2>&1 | grep -E 'public|protected' | one 1200)"
-          echo "::notice title=javap:ModelPart::$(javap -cp $CP net.minecraft.client.model.geom.ModelPart 2>&1 | grep -E 'public' | one 1800)"
-          echo "::notice title=javap:geom-builders::MESH=$(javap -cp $CP net.minecraft.client.model.geom.builders.MeshDefinition 2>&1 | grep -E 'public' | one 600) PART=$(javap -cp $CP net.minecraft.client.model.geom.builders.PartDefinition 2>&1 | grep -E 'public' | one 900) CUBE=$(javap -cp $CP net.minecraft.client.model.geom.builders.CubeListBuilder 2>&1 | grep -E 'public' | one 900)"
-          echo "::notice title=javap:geom-more::POSE=$(javap -cp $CP net.minecraft.client.model.geom.builders.PartPose 2>&1 | grep -E 'public static' | one 600) LAYER=$(javap -cp $CP net.minecraft.client.model.geom.LayerDefinition 2>&1 | grep -E 'public static' | one 600) CUBEDEFORM=$(javap -cp $CP net.minecraft.client.model.geom.builders.CubeDeformation 2>&1 | grep -E 'public' | one 400)"
-          echo "::notice title=javap:render-state::$(javap -cp $CP net.minecraft.client.renderer.entity.state.LivingEntityRenderState 2>&1 | one 1800)"
-          echo "::notice title=javap:entity-render-state::$(javap -cp $CP net.minecraft.client.renderer.entity.state.EntityRenderState 2>&1 | grep -E 'public' | one 1200)"
-          echo "::notice title=javap:Attributes::$(javap -cp $CP net.minecraft.world.entity.ai.attributes.Attributes 2>&1 | grep -iE 'FLYING_SPEED|MOVEMENT_SPEED|MAX_HEALTH|ATTACK|FOLLOW_RANGE|ARMOR' | one 1400)"
-          echo "::notice title=javap:Mob-classes::$(javap -cp $CP net.minecraft.world.entity.FlyingMob 2>&1 | grep -E 'public|protected' | one 1200) ~~ MONSTER=$(javap -cp $CP net.minecraft.world.entity.monster.Monster 2>&1 | grep -E 'public' | one 1000)"
-          echo "::notice title=javap:PathfinderMob::$(javap -cp $CP net.minecraft.world.entity.PathfinderMob 2>&1 | grep -E 'public|protected' | one 1600)"
-          echo "::notice title=javap:ModelLayers::$(javap -cp $CP net.minecraft.client.model.geom.ModelLayers 2>&1 | grep -E 'register|create' | one 1200)"
-          echo "::notice title=json:structure-fossil::$(unzip -p client.jar data/minecraft/worldgen/structure/nether_fossil.json 2>&1 | tr -d '\n' | tr -s ' ' | one 1400)"
-          echo "::notice title=json:template-pool-fossil::$(unzip -p client.jar data/minecraft/worldgen/template_pool/nether_fossil/start.json 2>&1 | tr -d '\n' | tr -s ' ' | one 1400)"
-          echo "::notice title=json:structure-set-nether::$(unzip -p client.jar data/minecraft/worldgen/structure_set/nether_complexes.json 2>&1 | tr -d '\n' | tr -s ' ' | one 1400)"
-          echo "::notice title=files:structure-nbt::$(unzip -l client.jar | awk '{print $4}' | grep -E '^data/minecraft/structures/' | head -12 | tr '\n' ' ' | one 900)"
-          echo "::notice title=json:ench-knockback::$(unzip -p client.jar data/minecraft/enchantment/knockback.json 2>&1 | tr -d '\n' | tr -s ' ' | one 1200)"
-          echo "::notice title=json:ench-sweeping::$(unzip -p client.jar data/minecraft/enchantment/sweeping.json 2>&1 | tr -d '\n' | tr -s ' ' | one 1400)"
-          echo "::notice title=json:ench-featherfall::$(unzip -p client.jar data/minecraft/enchantment/feather_falling.json 2>&1 | tr -d '\n' | tr -s ' ' | one 1400)"
-          echo "::notice title=json:ench-efficiency::$(unzip -p client.jar data/minecraft/enchantment/efficiency.json 2>&1 | tr -d '\n' | tr -s ' ' | one 1200)"
+          echo "::notice title=json:ench-knockback::$(unzip -p client.jar data/minecraft/enchantment/knockback.json 2>&1 | tr -d '\n' | tr -s ' ' | one 1100)"
+          echo "::notice title=json:ench-sweeping::$(unzip -p client.jar data/minecraft/enchantment/sweeping.json 2>&1 | tr -d '\n' | tr -s ' ' | one 1300)"
+          echo "::notice title=json:ench-featherfall::$(unzip -p client.jar data/minecraft/enchantment/feather_falling.json 2>&1 | tr -d '\n' | tr -s ' ' | one 1300)"
+          echo "::notice title=json:ench-efficiency::$(unzip -p client.jar data/minecraft/enchantment/efficiency.json 2>&1 | tr -d '\n' | tr -s ' ' | one 1100)"
+          echo "::notice title=json:structure-fossil::$(unzip -p client.jar data/minecraft/worldgen/structure/nether_fossil.json 2>&1 | tr -d '\n' | tr -s ' ' | one 1300)"
+          echo "::notice title=json:pool-fossil::$(unzip -p client.jar data/minecraft/worldgen/template_pool/nether_fossil/start.json 2>&1 | tr -d '\n' | tr -s ' ' | one 1300)"
+          echo "::notice title=json:set-nether::$(unzip -p client.jar data/minecraft/worldgen/structure_set/nether_complexes.json 2>&1 | tr -d '\n' | tr -s ' ' | one 1200)"
+          echo "::notice title=files:structure-nbt::$(unzip -l client.jar | awk '{print $4}' | grep -E '^data/minecraft/structures/' | head -10 | tr '\n' ' ' | one 800) DV=$(javap -constants -cp $CP net.minecraft.SharedConstants 2>&1 | grep -iE 'DATA_VERSION|WORLD_VERSION' | one 700)"
+          echo "::notice title=javap:render-state::$(javap -cp $CP net.minecraft.client.renderer.entity.state.LivingEntityRenderState 2>&1 | grep -E 'abstract|public|float|int|boolean' | one 1600)"
+          echo "::notice title=javap:EntityRenderState::$(javap -cp $CP net.minecraft.client.renderer.entity.state.EntityRenderState 2>&1 | grep -E 'public' | one 1100)"
+          echo "::notice title=javap:Attributes::$(javap -cp $CP net.minecraft.world.entity.ai.attributes.Attributes 2>&1 | grep -iE 'FLYING_SPEED|MOVEMENT_SPEED|MAX_HEALTH|ATTACK|FOLLOW_RANGE' | one 1200)"
+          echo "::notice title=javap:geom-more::POSE=$(javap -cp $CP net.minecraft.client.model.geom.PartPose 2>&1 | grep -E 'public static' | one 600) LAYER=$(javap -cp $CP net.minecraft.client.model.geom.LayerDefinition 2>&1 | grep -E 'public static' | one 600) DEFORM=$(javap -cp $CP net.minecraft.client.model.geom.builders.CubeDeformation 2>&1 | grep -E 'public' | one 400)"
+          echo "::notice title=javap:ModelLayers::$(javap -cp $CP net.minecraft.client.model.geom.ModelLayers 2>&1 | grep -E 'register|create|public static final net.minecraft.resources.ResourceKey' | one 1100)"
+          echo "::notice title=javap:FlyingMob::$(javap -cp $CP net.minecraft.world.entity.FlyingMob 2>&1 | grep -E 'public|protected' | one 1100) ~~ MONSTER=$(javap -cp $CP net.minecraft.world.entity.monster.Monster 2>&1 | grep -E 'public' | one 900)"
+          echo "::notice title=javap:PathfinderMob::$(javap -cp $CP net.minecraft.world.entity.PathfinderMob 2>&1 | grep -E 'public|protected' | one 1500)"
+          echo "::notice title=javap:register-entity::$(javap -cp $CP net.minecraft.core.registries.BuiltInRegistries 2>&1 | grep -iE 'ENTITY_TYPE|Registry<' | one 1200)"
 
       - name: upload artifact
         uses: actions/upload-artifact@v7
