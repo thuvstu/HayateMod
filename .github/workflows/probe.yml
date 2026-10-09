@@ -222,7 +222,7 @@ jobs:
         run: |
           set +e
           cd ci-out
-          echo "::notice title=tabs:fields::$(javap -cp client.jar net.minecraft.world.item.CreativeModeTabs 2>&1 | grep -oE 'CreativeModeTabs [A-Z_0-9]+' | sed 's/CreativeModeTabs //' | sort -u | tr '\n' ' ' | head -c 2200)"
+          echo "::notice title=tabs:fields::$(javap -cp client.jar net.minecraft.world.item.CreativeModeTabs 2>&1 | grep -oE 'CreativeModeTab> [A-Z_0-9]+;' | sed 's/CreativeModeTab> //;s/;//' | sort -u | tr '\n' ' ' | head -c 2200)"
           echo "::notice title=javap:properties::$(javap -cp client.jar 'net.minecraft.world.item.Item$Properties' 2>&1 | grep -oE 'Properties (sword|pickaxe|axe|shovel|hoe|durability|component|stacksTo)\(.*' | tr '\n' '~' | head -c 1500)"
           echo "::notice title=javap:itemstack::$(javap -cp client.jar net.minecraft.world.item.ItemStack 2>&1 | grep -oE 'hurtAndBreak\(.*' | tr '\n' '~' | head -c 900)"
           echo "::notice title=javap:living::$(javap -cp client.jar net.minecraft.world.entity.LivingEntity 2>&1 | grep -oE '(getEquipmentSlotForItem|getSlotForItem|resetFallDistance)\(.*' | tr '\n' '~' | head -c 900)"
