@@ -218,16 +218,16 @@ jobs:
           echo "--- done ---"
           ls -la
 
-      - name: emit tool and component api as annotations
+      - name: emit creative tab and item usage api as annotations
         run: |
           set +e
           cd ci-out
-          echo "::notice title=javap:Weapon::$(javap -cp client.jar net.minecraft.world.item.component.Weapon 2>&1 | tr '\n' '~' | tr -s ' ' | head -c 1400)"
-          echo "::notice title=javap:Tool::$(javap -cp client.jar net.minecraft.world.item.component.Tool 2>&1 | tr '\n' '~' | tr -s ' ' | head -c 1800)"
-          echo "::notice title=tags:incorrect::$(javap -cp client.jar net.minecraft.tags.BlockTags 2>&1 | grep -oE 'INCORRECT_FOR_[A-Z_]+' | sort -u | tr '\n' ' ' | head -c 1200)"
-          echo "::notice title=tags:item::$(javap -cp client.jar net.minecraft.tags.ItemTags 2>&1 | grep -oE '(DIAMOND|IRON|GOLD|NETHERITE|COPPER)_[A-Z_]+|REPAIR[A-Z_]*' | sort -u | tr '\n' ' ' | head -c 1500)"
-          echo "::notice title=components:names::$(javap -cp client.jar net.minecraft.core.component.DataComponents 2>&1 | grep -oE ' (WEAPON|TOOL|USE_COOLDOWN|CONSUMABLE|MAX_DAMAGE|DAMAGE|EQUIPPABLE|FOOD|USE_REMAINDER|GLIDER|DAMAGE_RESISTANT);' | sort -u | tr '\n' ' ' | head -c 800)"
-          echo "::notice title=classes:fuel::$(unzip -l client.jar | awk '{print $4}' | grep -iE 'fuel' | head -8 | tr '\n' ' ' | head -c 800)"
+          echo "::notice title=tabs:fields::$(javap -cp client.jar net.minecraft.world.item.CreativeModeTabs 2>&1 | grep -oE 'CreativeModeTabs [A-Z_0-9]+' | sed 's/CreativeModeTabs //' | sort -u | tr '\n' ' ' | head -c 2200)"
+          echo "::notice title=javap:properties::$(javap -cp client.jar 'net.minecraft.world.item.Item$Properties' 2>&1 | grep -oE 'Properties (sword|pickaxe|axe|shovel|hoe|durability|component|stacksTo)\(.*' | tr '\n' '~' | head -c 1500)"
+          echo "::notice title=javap:itemstack::$(javap -cp client.jar net.minecraft.world.item.ItemStack 2>&1 | grep -oE 'hurtAndBreak\(.*' | tr '\n' '~' | head -c 900)"
+          echo "::notice title=javap:living::$(javap -cp client.jar net.minecraft.world.entity.LivingEntity 2>&1 | grep -oE '(getEquipmentSlotForItem|getSlotForItem|resetFallDistance)\(.*' | tr '\n' '~' | head -c 900)"
+          echo "::notice title=javap:level-particles::$(javap -cp client.jar net.minecraft.world.level.Level 2>&1 | grep -oE 'sendParticles\(.*' | tr '\n' '~' | head -c 600)$(javap -cp client.jar net.minecraft.server.level.ServerLevel 2>&1 | grep -oE 'sendParticles\(.*' | tr '\n' '~' | head -c 600)"
+          echo "::notice title=javap:cooldowns::$(javap -cp client.jar net.minecraft.world.item.ItemCooldowns 2>&1 | grep -oE 'addCooldown\(.*' | tr '\n' '~' | head -c 700)"
 
       - name: upload artifact
         uses: actions/upload-artifact@v7
