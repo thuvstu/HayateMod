@@ -5,6 +5,7 @@
 	"enchantment.hayatemod.gale_burst.desc": "攻撃した対象を大きく吹き飛ばす。",
 	"enchantment.hayatemod.gale_drop": "疾風の着地",
 	"enchantment.hayatemod.gale_drop.desc": "落下ダメージを軽減する。",
+	"entity.hayatemod.gale_spirit": "疾風の精",
 	"creativeTab.hayatemod": "Hayate Mod",
 	"item.hayatemod.gale_dust": "疾風の粉",
 	"item.hayatemod.gale_ingot": "疾風のインゴット",

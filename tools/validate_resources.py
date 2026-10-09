@@ -303,6 +303,48 @@ def check_biomes() -> None:
 					fail(f"worldgen/biome/{path.name}: unknown placed feature {feature}")
 
 
+
+def check_structures() -> None:
+	"""Jigsaw structures need a template pool, and every pool element an NBT file."""
+	pools = DATA / "worldgen" / "template_pool"
+	for path in sorted(pools.glob("**/*.json")):
+		content = load_json(path)
+		if content is None:
+			continue
+		for element in content.get("elements", []):
+			location = element.get("element", {}).get("location")
+			if not isinstance(location, str) or not location.startswith(f"{MOD_ID}:"):
+				continue
+			target = DATA / "structures" / (location.split(":", 1)[1] + ".nbt")
+			if not target.exists():
+				fail(f"template_pool/{path.relative_to(pools).as_posix()}: "
+				     f"missing structure NBT for {location}")
+
+	structures = DATA / "worldgen" / "structure"
+	for path in sorted(structures.glob("*.json")):
+		content = load_json(path)
+		if content is None:
+			continue
+		start_pool = content.get("start_pool")
+		if isinstance(start_pool, str) and start_pool.startswith(f"{MOD_ID}:"):
+			target = DATA / "worldgen" / "template_pool" / (start_pool.split(":", 1)[1] + ".json")
+			if not target.exists():
+				fail(f"structure/{path.name}: missing start pool {start_pool}")
+
+	sets = DATA / "worldgen" / "structure_set"
+	for path in sorted(sets.glob("*.json")):
+		content = load_json(path)
+		if content is None:
+			continue
+		for entry in content.get("structures", []):
+			name = entry.get("structure")
+			if not isinstance(name, str) or not name.startswith(f"{MOD_ID}:"):
+				continue
+			target = structures / (name.split(":", 1)[1] + ".json")
+			if not target.exists():
+				fail(f"structure_set/{path.name}: unknown structure {name}")
+
+
 def check_trim_materials() -> None:
 	directory = DATA / "trim_material"
 	if not directory.exists():
@@ -347,6 +389,7 @@ def main() -> int:
 	check_animations()
 	check_equipment()
 	check_biomes()
+	check_structures()
 	check_trim_materials()
 
 	item_ids, block_ids = registered_ids()

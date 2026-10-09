@@ -8,6 +8,7 @@ import net.minecraft.resources.Identifier;
 import net.fabricmc.api.ModInitializer;
 
 import com.thuvstu.hayatemod.block.ModBlocks;
+import com.thuvstu.hayatemod.entity.ModEntities;
 import com.thuvstu.hayatemod.item.ModItems;
 import com.thuvstu.hayatemod.worldgen.ModWorldgen;
 
@@ -36,6 +37,8 @@ public class HayateMod implements ModInitializer {
 		// vanilla itself uses (see net.minecraft.world.item.Items).
 		ModItems.initialize();
 		ModBlocks.initialize();
+		// ModWorldgen spawns the gale spirit, so the entity type has to exist first.
+		ModEntities.initialize();
 		ModWorldgen.initialize();
 	}
 }

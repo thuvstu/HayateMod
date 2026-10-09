@@ -770,6 +770,37 @@ def gale_ash() -> Canvas:
 	return c
 
 
+def gale_spirit() -> Canvas:
+	"""The gale spirit's skin: a 64x32 mob sheet of drifting wind bands.
+
+	The UV layout is the usual one (a cube unrolls into a strip twice as wide as
+	its girth), but because the sprite is meant to read as moving air the sheet is
+	a smooth gradient with streaks over it - any mapping lands on gale colour.
+	"""
+	c = Canvas(64, 32)
+	for y in range(32):
+		for x in range(64):
+			bands = ((x * 0.7 + y * 3.1) % 11.0) / 11.0
+			t = min(1.0, 0.12 + (y / 31.0) * 0.45 + bands * 0.18)
+			c.set(x, y, mix(PALE, DEEP, t))
+	# three pale streaks sweeping down the body, like wind over water
+	for k in (4, 22, 41):
+		for y in range(32):
+			for width in range(2):
+				x = int((k + y * 1.6 + width) % 64)
+				c.set(x, y, mix(c.get(x, y), SHINE, 0.45))
+	# a darker underside so the cube reads as a solid form
+	for y in range(20, 28):
+		for x in range(64):
+			c.set(x, y, mix(c.get(x, y), DEEP, 0.30))
+	# eyes, in the middle of the head strip
+	for dx in range(3):
+		for dy in range(2):
+			c.set(38 + dx, 4 + dy, OUTLINE)
+			c.set(46 + dx, 4 + dy, OUTLINE)
+	return c
+
+
 # ------------------------------------------------------------------------ icon
 
 
@@ -845,6 +876,7 @@ def targets():
 		ASSETS / "textures" / "block" / "deepslate_gale_ore.png":
 			ore(DEEPSLATE, DEEPSLATE_LIGHT, DEEPSLATE_DARK, "7FE3F0", "17131A"),
 		ASSETS / "textures" / "block" / "gale_ash.png": gale_ash(),
+		ASSETS / "textures" / "entity" / "gale_spirit.png": gale_spirit(),
 		ASSETS / "icon.png": icon(),
 	}
 
