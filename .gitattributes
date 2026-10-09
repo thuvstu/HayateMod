@@ -1,0 +1,8 @@
+# Normalise line endings in the repository and check out LF everywhere.
+* text=auto eol=lf
+
+# Binary assets must never be touched.
+*.png binary
+*.jar binary
+*.ogg binary
+gradlew.bat text eol=crlf
