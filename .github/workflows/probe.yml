@@ -238,16 +238,16 @@ jobs:
           echo "::notice title=javap:AttributeBuilder::$(javap -cp client.jar 'net.minecraft.world.item.component.ItemAttributeModifiers$Builder' 2>&1 | tr '\n' '~' | tr -s ' ' | head -c 1200)"
           echo "::notice title=javap:AttributeModifier::$(javap -cp client.jar net.minecraft.world.entity.ai.attributes.AttributeModifier 2>&1 | grep -E 'public' | head -10 | tr '\n' '~' | tr -s ' ' | head -c 1000)"
 
-      - name: emit trim and biome data as annotations
+      - name: emit trim, biome and disk feature data as annotations
         run: |
           set +e
           cd ci-out
-          echo "::notice title=files:trim::$(unzip -l client.jar | awk '{print $4}' | grep -E '^data/minecraft/(trim_material|trim_pattern)/' | head -20 | tr '\n' ' ' | head -c 1500)"
-          echo "::notice title=json:trim-material::$(unzip -p client.jar data/minecraft/trim_material/gold.json 2>&1 | tr -d '\n' | tr -s ' ' | head -c 1300)"
-          echo "::notice title=json:trim-pattern::$(unzip -p client.jar data/minecraft/trim_pattern/sentry.json 2>&1 | tr -d '\n' | tr -s ' ' | head -c 1500)"
-          echo "::notice title=json:biome-deltas::$(unzip -p client.jar data/minecraft/worldgen/biome/basalt_deltas.json 2>&1 | tr -d '\n' | tr -s ' ' | head -c 2600)"
-          echo "::notice title=files:biome-tags::$(unzip -l client.jar | awk '{print $4}' | grep -E '^data/minecraft/tags/worldgen/biome/' | head -14 | tr '\n' ' ' | head -c 1000)"
-          echo "::notice title=files:noise-params::$(unzip -l client.jar | awk '{print $4}' | grep -E '^data/minecraft/worldgen/multi_noise_biome_source_parameter_list/' | head -8 | tr '\n' ' ' | head -c 800)"
+          echo "::notice title=javap:TrimMaterial::$(javap -cp client.jar net.minecraft.world.item.equipment.trim.TrimMaterial 2>&1 | tr '\n' '~' | tr -s ' ' | head -c 1500)"
+          echo "::notice title=files:trim-textures::$(unzip -l client.jar | awk '{print $4}' | grep -iE 'trim' | grep -E '\.png$' | head -14 | tr '\n' ' ' | head -c 1300)"
+          echo "::notice title=javap:TargetPoint::$(javap -cp client.jar 'net.minecraft.world.level.biome.Climate$TargetPoint' 2>&1 | tr '\n' '~' | tr -s ' ' | head -c 1300)"
+          echo "::notice title=json:biome-void::$(unzip -p client.jar data/minecraft/worldgen/biome/the_void.json 2>&1 | tr -d '\n' | tr -s ' ' | head -c 1400)"
+          echo "::notice title=json:feature-disk::$(unzip -p client.jar data/minecraft/worldgen/feature/disk_gravel.json 2>&1 | tr -d '\n' | tr -s ' ' | head -c 900)"
+          echo "::notice title=json:placed-disk::$(unzip -p client.jar data/minecraft/worldgen/placed_feature/disk_gravel.json 2>&1 | tr -d '\n' | tr -s ' ' | head -c 900)"
 
       - name: upload artifact
         uses: actions/upload-artifact@v7
