@@ -593,6 +593,126 @@ def ore(base, light, dark, speck: str, shadow: str) -> Canvas:
 	return c
 
 
+# --------------------------------------------------------------------- armour
+
+# The silhouette of the vanilla iron armour, measured on the real 26.3 client jar
+# (see .github/workflows/probe.yml). Reusing it keeps the gale armour perfectly
+# aligned with the player model; only the colours are ours.
+# Each entry is (x, y, width, height, brightness) of a solid block of pixels.
+ARMOUR_TEMPLATE = {
+	"humanoid": [
+		(8, 0, 8, 11, 202), (0, 8, 8, 4, 199), (16, 8, 16, 4, 201), (8, 11, 1, 1, 194),
+		(11, 11, 2, 2, 206), (15, 11, 1, 1, 183), (0, 12, 4, 1, 188), (20, 12, 12, 1, 198),
+		(24, 13, 8, 1, 204), (26, 14, 4, 1, 188), (8, 16, 4, 4, 203), (44, 16, 4, 9, 198),
+		(16, 20, 6, 9, 201), (26, 20, 8, 9, 201), (38, 20, 6, 5, 200), (48, 20, 8, 5, 196),
+		(22, 21, 1, 10, 206), (25, 21, 1, 10, 208), (34, 21, 4, 9, 204), (23, 22, 2, 9, 206),
+		(38, 25, 2, 4, 202), (0, 26, 16, 6, 199), (21, 29, 1, 1, 183), (26, 29, 1, 1, 183),
+		(33, 29, 1, 1, 194), (38, 29, 1, 1, 183),
+	],
+	"humanoid_leggings": [
+		(4, 16, 4, 13, 194), (0, 20, 4, 9, 195), (8, 20, 8, 9, 196), (16, 27, 24, 5, 198),
+	],
+}
+
+
+def armour_layer(kind: str) -> Canvas:
+	"""A 64x32 equipment layer, recoloured from the iron template into gale colours."""
+	c = Canvas(64, 32)
+	for x, y, width, height, brightness in ARMOUR_TEMPLATE[kind]:
+		t = min(1.0, max(0.0, (brightness - 180) / 30))
+		colour = mix(DEEP, SHINE, 0.15 + t * 0.85)
+		c.rect(x, y, x + width - 1, y + height - 1, colour)
+
+	if kind == "humanoid":
+		# a gem in the middle of the helm, and wind lines on the chest and boots
+		c.rect(11, 10, 12, 11, CRYSTAL)
+		c.set(11, 10, SHINE)
+		c.vline(29, 21, 27, PALE)
+		c.vline(30, 21, 27, DEEP)
+		for x in range(1, 15, 3):
+			c.set(x, 28, PALE)
+	else:
+		# leggings: a belt line and a stripe down each leg
+		c.hline(0, 15, 21, PALE)
+		c.vline(3, 23, 31, mix(CRYSTAL, SHINE, 0.4))
+		c.vline(12, 23, 31, mix(CRYSTAL, SHINE, 0.4))
+
+	return c
+
+
+def helmet() -> Canvas:
+	"""A gale helm with a swept crest."""
+	c = Canvas(16)
+	for y in range(3, 14):
+		half = int(round(4 + 1.4 * math.sin((y - 3) / 10 * math.pi)))
+		for x in range(8 - half, 8 + half):
+			c.set(x, y, METAL if y > 5 else METAL_LIGHT)
+	# visor
+	c.rect(4, 7, 11, 9, rgb("22323C"))
+	c.rect(5, 7, 10, 8, DEEP)
+	c.set(6, 8, PALE)
+	c.set(9, 8, SHINE)
+	# crest
+	for step in range(6):
+		c.set(8, 2 - step // 3, CRYSTAL if step % 2 else PALE)
+	c.set(8, 1, SHINE)
+	c.outline(METAL_EDGE)
+	return c
+
+
+def chestplate() -> Canvas:
+	"""A chest plate with shoulder guards."""
+	c = Canvas(16)
+	for y in range(4, 14):
+		half = 5 if y > 6 else 4
+		for x in range(8 - half, 8 + half):
+			c.set(x, y, METAL if x % 5 else METAL_LIGHT)
+	# neck opening
+	c.rect(6, 4, 9, 5, rgb("22323C"))
+	# wind stripe down the middle
+	c.vline(8, 6, 13, PALE)
+	c.vline(7, 6, 13, CRYSTAL)
+	c.set(8, 7, SHINE)
+	# rivets on the shoulders
+	for x, y in ((3, 6), (12, 6)):
+		c.set(x, y, SHINE)
+		c.set(x, y + 1, METAL_DARK)
+	c.outline(METAL_EDGE)
+	return c
+
+
+def leggings_icon() -> Canvas:
+	"""Two greaves and a belt."""
+	c = Canvas(16)
+	for x0 in (2, 8):
+		for y in range(5, 15):
+			for x in range(x0, x0 + 4):
+				c.set(x, y, METAL if (x + y) % 4 else METAL_LIGHT)
+		c.vline(x0 + 1, 7, 14, CRYSTAL)
+	c.rect(2, 4, 13, 5, METAL_DARK)
+	c.hline(2, 13, 5, METAL_LIGHT)
+	c.set(5, 4, SHINE)
+	c.set(10, 4, SHINE)
+	c.outline(METAL_EDGE)
+	return c
+
+
+def boots() -> Canvas:
+	"""Boots with a turned down cuff."""
+	c = Canvas(16)
+	for x0 in (2, 8):
+		for y in range(8, 15):
+			for x in range(x0, x0 + 4):
+				c.set(x, y, METAL if (x + y) % 4 else METAL_LIGHT)
+		c.rect(x0, 6, x0 + 3, 7, METAL_DARK)
+		c.rect(x0, 13, x0 + 3, 14, rgb("22323C"))
+		c.set(x0 + 1, 11, CRYSTAL)
+	c.set(3, 7, SHINE)
+	c.set(9, 7, SHINE)
+	c.outline(METAL_EDGE)
+	return c
+
+
 # ------------------------------------------------------------------------ icon
 
 
@@ -651,6 +771,13 @@ def targets():
 		ASSETS / "textures" / "item" / "gale_blade.png": gale_blade(),
 		ASSETS / "textures" / "item" / "gale_staff.png": gale_staff(),
 		ASSETS / "textures" / "item" / "gale_pickaxe.png": gale_pickaxe(),
+		ASSETS / "textures" / "item" / "gale_helmet.png": helmet(),
+		ASSETS / "textures" / "item" / "gale_chestplate.png": chestplate(),
+		ASSETS / "textures" / "item" / "gale_leggings.png": leggings_icon(),
+		ASSETS / "textures" / "item" / "gale_boots.png": boots(),
+		ASSETS / "textures" / "entity" / "equipment" / "humanoid" / "gale.png": armour_layer("humanoid"),
+		ASSETS / "textures" / "entity" / "equipment" / "humanoid_leggings" / "gale.png":
+			armour_layer("humanoid_leggings"),
 		ASSETS / "textures" / "item" / "greater_gale_charm.png": greater_gale_charm(),
 		ASSETS / "textures" / "block" / "gale_block.png": gale_block(),
 		ASSETS / "textures" / "block" / "gale_lamp_frame.png": lamp_frame(),

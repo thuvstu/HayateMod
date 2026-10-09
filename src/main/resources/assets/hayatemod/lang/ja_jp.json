@@ -22,5 +22,10 @@
 	"item.hayatemod.greater_gale_charm": "疾風の護符・大",
 	"itemTooltip.hayatemod.gale_staff": "右クリックで風に乗る（クールダウン1.5秒）",
 	"itemTooltip.hayatemod.greater_gale_charm": "移動速度上昇III（45秒）と低速落下",
-	"message.hayatemod.greater_gale_charm.used": "嵐がお前を持ち上げる！"
+	"message.hayatemod.greater_gale_charm.used": "嵐がお前を持ち上げる！",
+	"item.hayatemod.gale_helmet": "疾風の兜",
+	"item.hayatemod.gale_chestplate": "疾風の胸当て",
+	"item.hayatemod.gale_leggings": "疾風の腿当て",
+	"item.hayatemod.gale_boots": "疾風のブーツ",
+	"itemTooltip.hayatemod.gale_set": "フルセット: 常に追い風が吹く"
 }

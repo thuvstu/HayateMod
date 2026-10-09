@@ -276,6 +276,23 @@ def check_animations() -> None:
 					fail(f"{meta.name}: frame {frame} is outside the texture ({height // width} frames)")
 
 
+def check_equipment() -> None:
+	"""Every equipment asset needs a 64x32 humanoid and humanoid_leggings texture."""
+	directory = DATA / "equipment"
+	if not directory.exists():
+		return
+	for path in sorted(directory.glob("*.json")):
+		load_json(path)
+		for kind in ("humanoid", "humanoid_leggings"):
+			texture = ASSETS / "textures" / "entity" / "equipment" / kind / f"{path.stem}.png"
+			if not texture.exists():
+				fail(f"equipment/{path.name}: missing {kind} texture ({texture.name})")
+				continue
+			width, height = png_size(texture)
+			if (width, height) != (64, 32):
+				fail(f"{kind}/{texture.name}: armour layers are 64x32, got {width}x{height}")
+
+
 def main() -> int:
 	for path in all_json():
 		load_json(path)
@@ -286,6 +303,7 @@ def main() -> int:
 	check_blockstates(set())
 	check_item_definitions()
 	check_animations()
+	check_equipment()
 
 	item_ids, block_ids = registered_ids()
 	check_translations(item_ids, block_ids)

@@ -16,6 +16,7 @@ import net.minecraft.world.item.Item;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.component.Consumable;
+import net.minecraft.world.item.equipment.ArmorType;
 import net.minecraft.world.item.component.UseCooldown;
 import net.minecraft.world.item.component.Consumables;
 import net.minecraft.world.item.consume_effects.ApplyStatusEffectsConsumeEffect;
@@ -88,6 +89,26 @@ public final class ModItems {
 					.durability(256)
 					.component(DataComponents.USE_COOLDOWN, new UseCooldown(1.5F)));
 
+	// --------------------------------------------- third batch: the gale armour
+
+	/**
+	 * The four armour pieces.
+	 *
+	 * <p>{@code Item.Properties#humanoidArmor} attaches the {@code equippable} component
+	 * (slot, equip sound, equipment asset) and the defence attributes for us.
+	 */
+	public static final Item GALE_HELMET = register(ModItemIds.GALE_HELMET, Item::new,
+			new Item.Properties().humanoidArmor(ModArmorMaterials.GALE, ArmorType.HELMET));
+
+	public static final Item GALE_CHESTPLATE = register(ModItemIds.GALE_CHESTPLATE, Item::new,
+			new Item.Properties().humanoidArmor(ModArmorMaterials.GALE, ArmorType.CHESTPLATE));
+
+	public static final Item GALE_LEGGINGS = register(ModItemIds.GALE_LEGGINGS, Item::new,
+			new Item.Properties().humanoidArmor(ModArmorMaterials.GALE, ArmorType.LEGGINGS));
+
+	public static final Item GALE_BOOTS = register(ModItemIds.GALE_BOOTS, Item::new,
+			new Item.Properties().humanoidArmor(ModArmorMaterials.GALE, ArmorType.BOOTS));
+
 	/** Speed III for 45 seconds and Slow Falling, at the cost of the charm. */
 	public static final Item GREATER_GALE_CHARM = register(ModItemIds.GREATER_GALE_CHARM,
 			GreaterGaleCharmItem::new, new Item.Properties().stacksTo(16));
@@ -120,6 +141,10 @@ public final class ModItems {
 				output.accept(ModItems.GALE_BLADE);
 				output.accept(ModItems.GALE_PICKAXE);
 				output.accept(ModItems.GALE_STAFF);
+				output.accept(ModItems.GALE_HELMET);
+				output.accept(ModItems.GALE_CHESTPLATE);
+				output.accept(ModItems.GALE_LEGGINGS);
+				output.accept(ModItems.GALE_BOOTS);
 
 				// The tab builder also accepts blocks (via their BlockItem).
 				output.accept(ModBlocks.GALE_BLOCK);
@@ -163,6 +188,10 @@ public final class ModItems {
 		CreativeModeTabEvents.modifyOutputEvent(CreativeModeTabs.COMBAT).register(output -> {
 			output.accept(ModItems.GALE_BLADE);
 			output.accept(ModItems.GALE_STAFF);
+			output.accept(ModItems.GALE_HELMET);
+			output.accept(ModItems.GALE_CHESTPLATE);
+			output.accept(ModItems.GALE_LEGGINGS);
+			output.accept(ModItems.GALE_BOOTS);
 		});
 
 		CreativeModeTabEvents.modifyOutputEvent(TOOLS_TAB)

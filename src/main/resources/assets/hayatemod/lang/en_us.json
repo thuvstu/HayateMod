@@ -22,5 +22,10 @@
 	"item.hayatemod.greater_gale_charm": "Greater Gale Charm",
 	"itemTooltip.hayatemod.gale_staff": "Right-click to ride the wind (1.5s cooldown)",
 	"itemTooltip.hayatemod.greater_gale_charm": "Speed III for 45s, then a soft landing",
-	"message.hayatemod.greater_gale_charm.used": "The storm lifts you!"
+	"message.hayatemod.greater_gale_charm.used": "The storm lifts you!",
+	"item.hayatemod.gale_helmet": "Gale Helm",
+	"item.hayatemod.gale_chestplate": "Gale Chestplate",
+	"item.hayatemod.gale_leggings": "Gale Leggings",
+	"item.hayatemod.gale_boots": "Gale Boots",
+	"itemTooltip.hayatemod.gale_set": "Full set: a permanent tailwind"
 }
