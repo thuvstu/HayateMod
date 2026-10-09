@@ -50,6 +50,9 @@ IDE から開く場合は `build.gradle` を **Gradle プロジェクトとし�
 | ブロック | `hayatemod:gale_lamp` | 右クリックで点灯/消灯するランプ（ブロックステート `lit`） |
 | ブロック | `hayatemod:gale_ore` | オーバーワールドに生成される鉱石（Y=-48〜88、台形分布） |
 | ブロック | `hayatemod:deepslate_gale_ore` | 深層岩バリアント |
+| ブロック | `hayatemod:gale_ash` | 疾風の灰（ネザーの疾風の渓谷の床を覆う。シャベルで採掘） |
+| バイオーム | `hayatemod:gale_hollow` | 疾風の渓谷（ネザーに生成。灰の円盤・疾風鉱石・固有の霧と粒子） |
+| トリム | `hayatemod:gale` | 疾風のインゴットが鍛冶台のトリム素材になる（色 `#7FE3F0`） |
 | エンチャント | `hayatemod:gale_step` | 靴に付与。レベルごとに移動速度 +4%（最大III） |
 | 防具 | `hayatemod:gale_helmet` / `gale_chestplate` / `gale_leggings` / `gale_boots` | 疾風の具足一式（鉄とダイヤの中間程度）。**4部位すべて装備すると移動速度上昇が持続** |
 | クリエイティブタブ | `hayatemod:hayate` | 上記をまとめた独自タブ |
@@ -59,6 +62,7 @@ IDE から開く場合は `build.gradle` を **Gradle プロジェクトとし�
 | イベント | `ServerLifecycleEvents.SERVER_STARTED` | 起動時ログ（テンプレート） |
 | イベント | `ServerTickEvents.END_SERVER_TICK` | 疾風の具足のフルセット判定（移動速度 + 風のパーティクル） |
 | ワールド生成 | `BiomeModifications.addFeature` | オーバーワールド全バイオームに疾風鉱石を追加 |
+| ワールド生成 | `NetherBiomes.addNetherBiome` | 疾風の渓谷をネザーのノイズ空間に登録 |
 
 ```
 # レシピ
@@ -136,6 +140,65 @@ CI では「生成結果がコミット済みか」も見ているので、ス�
 `tools/generate_textures.py` 内で疾風カラーに再着色して生成しています（矩形データは
 `ARMOUR_TEMPLATE`、取得方法は `.github/workflows/probe.yml` 参照）。
 
+### ネザーバイオームの追加（26.x）
+
+26.3 のバイオーム JSON は**トップレベルのキーが変わりました**。色・粒子・スポーンは
+`attributes` マップの中に入り、`effects` は `water_color` だけを保持しています。
+
+```jsonc
+{
+  "attributes": {
+    "minecraft:visual/fog_color": "#2A5A66",          // 16進数の文字列
+    "minecraft:visual/sky_color": "#0B1C22",
+    "minecraft:visual/ambient_particles": {
+      "argument": [{ "particle": { "type": "minecraft:white_ash" }, "probability": 0.06 }],
+      "modifier": "append"
+    },
+    "minecraft:gameplay/natural_mob_spawns": { "argument": { ... }, "modifier": "overlay" }
+  },
+  "features": [[], [], [], [], [], [], [], [], [], [], []],  // 必ず 11 個の配列
+  "carvers": ["minecraft:nether_cave"],
+  "has_precipitation": false,
+  "temperature": 2.0
+}
+```
+
+`features` は `GenerationStep.Decoration` と 1 対 1 なので**必ず 11 個**（空でも良い）。
+鉱石は index 6、地表のディスク類は index 10 に入れるのがバニラの慣習です。
+
+ネザーに配置するには Fabric API の `NetherBiomes` を使います。
+
+```java
+public static final ResourceKey<Biome> GALE_HOLLOW =
+		ResourceKey.create(Registries.BIOME, HayateMod.id("gale_hollow"));
+
+// temperature, humidity, continentalness, erosion, depth, weirdness, offset
+NetherBiomes.addNetherBiome(GALE_HOLLOW,
+		Climate.parameters(0.0F, -0.7F, 0.0F, 0.0F, 0.0F, 0.35F, 0.0F));
+```
+
+地表を特徴づけるには `minecraft:disk` が手軽です（`minecraft:netherrack` を
+`hayatemod:gale_ash` に置き換える）。実物の書式は
+`data/minecraft/worldgen/feature/disk_gravel.json` が参考になります。
+
+### 防具のトリム素材（26.x）
+
+鍛冶台で選べる色は**データだけで増やせます**。
+
+1. `data/<ns>/trim_material/<id>.json` を置く
+   （`palette_id` は既存のバニラパレットを借りれば新規テクスチャ不用）
+2. `new Item.Properties().trimMaterial(ResourceKey.create(Registries.TRIM_MATERIAL, id(...)))`
+   を素材アイテムに付ける
+3. 説明文を `trim_material.<ns>.<id>` で各言語ファイルに書く
+
+```jsonc
+// data/hayatemod/trim_material/gale.json
+{
+  "palette_id": "minecraft:trim/diamond",
+  "description": { "translate": "trim_material.hayatemod.gale", "color": "#7FE3F0" }
+}
+```
+
 ### ワールド生成の3点セット
 
 26.x のワールド生成は**完全にデータ駆動**です。`ConfiguredFeature` / `OreConfiguration` /
@@ -169,6 +232,7 @@ src/main/java/.../worldgen/ModWorldgen.java            … BiomeModifications.ad
 | Java 21 | Java 25 |
 | `data/<ns>/loot_tables/...` | `data/<ns>/loot_table/...` |
 | `worldgen/configured_feature` | `worldgen/feature`（`config` ラッパーが消滅） |
+| バイオームの `effects`（色・粒子・スポーン） | `attributes` マップ + `modifier`（`append` / `overlay`） |
 | `ConfiguredFeature` / `OreConfiguration` | `Feature`（インターフェース）/ `BlockReplacement` |
 
 コード側も、26.2 でブロック＋アイテムの ID が `net.minecraft.references.BlockItemId` に
