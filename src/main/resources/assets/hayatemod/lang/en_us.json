@@ -13,5 +13,14 @@
 	"itemTooltip.hayatemod.gale_charm": "A burst of wind, then nothing but dust",
 	"message.hayatemod.gale_charm.used": "The wind carries you!",
 	"commands.hayatemod.about": "HayateMod %1$s - running on unobfuscated Minecraft %2$s with Fabric API",
-	"commands.hayatemod.boost.success": "Gave Speed %3$s to %1$s player(s) for %2$s seconds"
+	"commands.hayatemod.boost.success": "Gave Speed %3$s to %1$s player(s) for %2$s seconds",
+	"item.hayatemod.gale_feather": "Gale Feather",
+	"item.hayatemod.gale_orb": "Gale Orb",
+	"item.hayatemod.gale_blade": "Gale Blade",
+	"item.hayatemod.gale_pickaxe": "Gale Pickaxe",
+	"item.hayatemod.gale_staff": "Gale Staff",
+	"item.hayatemod.greater_gale_charm": "Greater Gale Charm",
+	"itemTooltip.hayatemod.gale_staff": "Right-click to ride the wind (1.5s cooldown)",
+	"itemTooltip.hayatemod.greater_gale_charm": "Speed III for 45s, then a soft landing",
+	"message.hayatemod.greater_gale_charm.used": "The storm lifts you!"
 }

@@ -12,8 +12,10 @@ import net.minecraft.world.food.FoodProperties;
 import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.CreativeModeTabs;
 import net.minecraft.world.item.Item;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.component.Consumable;
+import net.minecraft.world.item.component.UseCooldown;
 import net.minecraft.world.item.component.Consumables;
 import net.minecraft.world.item.consume_effects.ApplyStatusEffectsConsumeEffect;
 
@@ -57,6 +59,38 @@ public final class ModItems {
 	public static final Item GALE_CHARM = register(ModItemIds.GALE_CHARM, GaleCharmItem::new,
 			new Item.Properties().stacksTo(16));
 
+	// -------------------------------------------- second batch: gear and parts
+
+	/** A wind tinted feather. Cheap to make, used in every gale tool recipe. */
+	public static final Item GALE_FEATHER = register(ModItemIds.GALE_FEATHER, Item::new, new Item.Properties());
+
+	/** Wind compressed into a sphere; the core of the gale tools. */
+	public static final Item GALE_ORB = register(ModItemIds.GALE_ORB, Item::new, new Item.Properties());
+
+	/**
+	 * A sword made of gale metal.
+	 *
+	 * <p>There is no {@code SwordItem} class any more: since 26.x the weapon and tool
+	 * behaviour is attached through components, which {@code Properties#sword} sets up
+	 * from a {@link net.minecraft.world.item.ToolMaterial}.
+	 */
+	public static final Item GALE_BLADE = register(ModItemIds.GALE_BLADE, Item::new,
+			new Item.Properties().sword(ModToolMaterials.GALE, 3.0F, -2.2F));
+
+	/** Same material, as a pickaxe. */
+	public static final Item GALE_PICKAXE = register(ModItemIds.GALE_PICKAXE, Item::new,
+			new Item.Properties().pickaxe(ModToolMaterials.GALE, 1.0F, -2.8F));
+
+	/** Right-click to dash. See {@link GaleStaffItem}. */
+	public static final Item GALE_STAFF = register(ModItemIds.GALE_STAFF, GaleStaffItem::new,
+			new Item.Properties()
+					.durability(256)
+					.component(DataComponents.USE_COOLDOWN, new UseCooldown(1.5F)));
+
+	/** Speed III for 45 seconds and Slow Falling, at the cost of the charm. */
+	public static final Item GREATER_GALE_CHARM = register(ModItemIds.GREATER_GALE_CHARM,
+			GreaterGaleCharmItem::new, new Item.Properties().stacksTo(16));
+
 	// ---------------------------------------------------------- creative tab
 
 	public static final ResourceKey<CreativeModeTab> HAYATE_TAB_KEY = ResourceKey.create(
@@ -70,6 +104,12 @@ public final class ModItems {
 				output.accept(ModItems.GALE_INGOT);
 				output.accept(ModItems.STORM_FRUIT);
 				output.accept(ModItems.GALE_CHARM);
+				output.accept(ModItems.GREATER_GALE_CHARM);
+				output.accept(ModItems.GALE_FEATHER);
+				output.accept(ModItems.GALE_ORB);
+				output.accept(ModItems.GALE_BLADE);
+				output.accept(ModItems.GALE_PICKAXE);
+				output.accept(ModItems.GALE_STAFF);
 
 				// The tab builder also accepts blocks (via their BlockItem).
 				output.accept(ModBlocks.GALE_BLOCK);
@@ -102,5 +142,20 @@ public final class ModItems {
 
 		CreativeModeTabEvents.modifyOutputEvent(CreativeModeTabs.FOOD_AND_DRINKS)
 				.register(output -> output.accept(ModItems.STORM_FRUIT));
+
+		// The craftable parts belong with the other ingredients...
+		CreativeModeTabEvents.modifyOutputEvent(CreativeModeTabs.INGREDIENTS).register(output -> {
+			output.accept(ModItems.GALE_FEATHER);
+			output.accept(ModItems.GALE_ORB);
+		});
+
+		// ... and the gear next to the vanilla equivalents.
+		CreativeModeTabEvents.modifyOutputEvent(CreativeModeTabs.COMBAT).register(output -> {
+			output.accept(ModItems.GALE_BLADE);
+			output.accept(ModItems.GALE_STAFF);
+		});
+
+		CreativeModeTabEvents.modifyOutputEvent(CreativeModeTabs.TOOLS)
+				.register(output -> output.accept(ModItems.GALE_PICKAXE));
 	}
 }

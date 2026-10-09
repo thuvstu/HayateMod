@@ -455,6 +455,35 @@ def greater_gale_charm() -> Canvas:
 	return c
 
 
+def gale_pickaxe() -> Canvas:
+	"""A pickaxe: an arced head on a wrapped handle."""
+	c = Canvas(16)
+	# head: an arc that dips towards the tips, two pixels thick
+	for x in range(2, 14):
+		top = 4 + int(round(((x - 7.5) ** 2) / 22))
+		c.set(x, top, METAL_LIGHT)
+		c.set(x, top + 1, METAL)
+		if x in (2, 3, 12, 13):
+			c.set(x, top + 2, METAL_DARK)
+	# cutting edge and the notch where the handle sits
+	for x in range(2, 14):
+		c.set(x, 4 + int(round(((x - 7.5) ** 2) / 22)) - 1, SHINE)
+	c.rect(6, 5, 9, 6, METAL_DARK)
+	c.set(7, 6, LEATHER)
+	c.set(8, 6, LEATHER_DARK)
+	# handle running to the lower left
+	for step in range(10):
+		t = step / 9
+		x = int(round(7 - 3 * t))
+		y = int(round(7 + 8 * t))
+		c.set(x, y, LEATHER)
+		c.set(x + 1, y, LEATHER_DARK)
+		c.set(x, y + 1, LEATHER_DARK)
+	c.set(3, 15, GOLD_DARK)
+	c.outline(METAL_EDGE)
+	return c
+
+
 # ---------------------------------------------------------------------- blocks
 
 
@@ -621,6 +650,7 @@ def targets():
 		ASSETS / "textures" / "item" / "gale_orb.png": gale_orb(),
 		ASSETS / "textures" / "item" / "gale_blade.png": gale_blade(),
 		ASSETS / "textures" / "item" / "gale_staff.png": gale_staff(),
+		ASSETS / "textures" / "item" / "gale_pickaxe.png": gale_pickaxe(),
 		ASSETS / "textures" / "item" / "greater_gale_charm.png": greater_gale_charm(),
 		ASSETS / "textures" / "block" / "gale_block.png": gale_block(),
 		ASSETS / "textures" / "block" / "gale_lamp_frame.png": lamp_frame(),

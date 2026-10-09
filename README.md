@@ -40,6 +40,12 @@ IDE から開く場合は `build.gradle` を **Gradle プロジェクトとし�
 | アイテム | `hayatemod:gale_ingot` | 疾風の粉を精錬/溶鉱したインゴット |
 | アイテム | `hayatemod:storm_fruit` | 食べると移動速度上昇II（15秒）が付く食べ物 |
 | アイテム | `hayatemod:gale_charm` | 右クリックで移動速度上昇II（30秒）。使い切りの消費アイテム |
+| アイテム | `hayatemod:greater_gale_charm` | 移動速度上昇III（45秒）+ 低速落下。使い切り |
+| アイテム | `hayatemod:gale_feather` | 羽根 + 疾風の粉から作れる中間素材 |
+| アイテム | `hayatemod:gale_orb` | 疾風の圧縮球。道具の中核素材 |
+| アイテム | `hayatemod:gale_blade` | 疾風の刃（ダイヤ相当・やや高速な剣） |
+| アイテム | `hayatemod:gale_pickaxe` | 疾風のつるはし |
+| アイテム | `hayatemod:gale_staff` | 右クリックで視線方向にダッシュ。耐久256 / クールダウン1.5秒 |
 | ブロック | `hayatemod:gale_block` | 金属系の建築ブロック（ツルハシ必須） |
 | ブロック | `hayatemod:gale_lamp` | 右クリックで点灯/消灯するランプ（ブロックステート `lit`） |
 | ブロック | `hayatemod:gale_ore` | オーバーワールドに生成される鉱石（Y=-48〜88、台形分布） |
@@ -60,6 +66,12 @@ IDE から開く場合は `build.gradle` を **Gradle プロジェクトとし�
 疾風のインゴット x4 + グロウストーン → 疾風ランプ x4
 疾風のインゴット x3 + 疾風の粉     → 疾風の護符
 リンゴ + 疾風の粉 + 砂糖      → 嵐の果実           (shapeless)
+羽根 + 疾風の粉               → 疾風の羽根 x2      (shapeless)
+疾風のインゴット x4 + 疾風の粉 x4 → 疾風の宝珠      (shapeless)
+宝珠 / インゴット / 羽根       → 疾風の刃           (shaped, 縦一列)
+インゴット x3 + 棒 x2         → 疾風のつるはし      (shaped)
+宝珠 / インゴット / 羽根       → 疾風の杖           (shaped, 斜め)
+疾風の護符 + 宝珠 + 羽根       → 疾風の護符・大     (shapeless)
 ```
 
 日本語（`ja_jp.json`）と英語（`en_us.json`）の翻訳を同梱しています。

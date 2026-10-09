@@ -1,0 +1,23 @@
+{
+	"type": "minecraft:crafting_shaped",
+	"category": "equipment",
+	"pattern": [
+		"O..",
+		".I.",
+		"..S"
+	],
+	"key": {
+		"O": {
+			"item": "hayatemod:gale_orb"
+		},
+		"I": {
+			"item": "hayatemod:gale_ingot"
+		},
+		"S": {
+			"item": "hayatemod:gale_feather"
+		}
+	},
+	"result": {
+		"id": "hayatemod:gale_staff"
+	}
+}
