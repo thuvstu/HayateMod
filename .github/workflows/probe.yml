@@ -1,0 +1,244 @@
+name: probe
+
+# Inspection helper.
+#
+# The sandbox this project is authored from cannot reach Maven Central / Mojang
+# mirrors, so this workflow runs on GitHub Actions, downloads the *real*
+# Minecraft + Fabric API jars and dumps:
+#   * the full class list of each jar
+#   * javap signatures for the classes the mod touches
+#   * the maven-metadata for fabric-api / fabric-loader / loom
+# into ci-out/, which is then pushed back to the branch so the output can be
+# read locally.
+on:
+  push:
+    paths:
+      - '.github/workflows/probe.yml'
+      - 'probe/**'
+  workflow_dispatch:
+    inputs:
+      minecraft:
+        description: 'Minecraft version to inspect'
+        required: false
+        default: '26.3'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: probe-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  probe:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: checkout repository
+        uses: actions/checkout@v6
+
+      - name: setup jdk
+        uses: actions/setup-java@v5
+        with:
+          java-version: '25'
+          distribution: 'microsoft'
+
+      - name: gather api surface
+        run: |
+          set +e
+          rm -rf ci-out && mkdir -p ci-out
+          cd ci-out
+          MC="${{ github.event.inputs.minecraft }}"
+          MC="${MC:-26.3}"
+          echo "=== target minecraft version: $MC ==="
+
+          echo "--- version manifest ---"
+          for META in \
+            "https://piston-meta.mojang.com/mc/game/version_manifest_v2.json" \
+            "https://launchermeta.mojang.com/mc/game/version_manifest.json" ; do
+            echo "trying $META"
+            code=$(curl -sSL --max-time 30 -o manifest.json -w '%{http_code}' "$META")
+            echo "  http=$code size=$(stat -c%s manifest.json 2>/dev/null || echo missing)"
+            if [ "$code" = "200" ]; then echo "  OK"; break; fi
+          done
+          head -c 300 manifest.json 2>/dev/null; echo
+
+          echo "--- resolve version json ---"
+          python3 - "$MC" <<'PY'
+          import json, sys, os
+          mc = sys.argv[1]
+          try:
+              m = json.load(open('manifest.json'))
+          except Exception as e:
+              print("manifest unreadable:", e); raise SystemExit(0)
+          ids = [x['id'] for x in m['versions']]
+          print("manifest has", len(ids), "versions; latest release:", m.get('latest', {}).get('release'))
+          print("matching ids:", [i for i in ids if i.startswith(mc)][:10])
+          v = next((x for x in m['versions'] if x['id'] == mc), None)
+          if v is None:
+              print("version not found:", mc); raise SystemExit(0)
+          open('version_url.txt', 'w').write(v['url'])
+          print("version json:", v['url'])
+          PY
+
+          if [ -s version_url.txt ]; then
+            code=$(curl -sSL --max-time 60 -o version.json -w '%{http_code}' "$(cat version_url.txt)")
+            echo "version.json http=$code"
+            python3 - <<'PY'
+          import json
+          try:
+              v = json.load(open('version.json'))
+          except Exception as e:
+              print("version json unreadable:", e); raise SystemExit(0)
+          print("javaVersion:", v.get('javaVersion'))
+          for key in ('client', 'server'):
+              d = v.get('downloads', {}).get(key)
+              if d:
+                  open(f'{key}_url.txt', 'w').write(d['url'])
+                  print(key, d['url'])
+          PY
+          fi
+
+          echo "--- download jars ---"
+          for side in client server; do
+            if [ -s "${side}_url.txt" ]; then
+              code=$(curl -sSL --max-time 600 -o "${side}.jar" -w '%{http_code}' "$(cat ${side}_url.txt)")
+              echo "$side jar http=$code size=$(stat -c%s ${side}.jar 2>/dev/null || echo 0)"
+            fi
+          done
+
+          echo "--- fabric artifacts ---"
+          for V in 0.162.0+26.3 0.161.0+26.3 0.160.7+26.3 0.162.0+26.3; do
+            URL="https://maven.fabricmc.net/net/fabricmc/fabric-api/fabric-api/$V/fabric-api-$V.jar"
+            code=$(curl -sSIL --max-time 30 -o /dev/null -w '%{http_code}' "$URL")
+            echo "fabric-api $V -> $code"
+            if [ "$code" = "200" ]; then
+              curl -sSL --max-time 600 -o fabric-api.jar "$URL"
+              echo "  downloaded size=$(stat -c%s fabric-api.jar)"
+              break
+            fi
+          done
+          for U in \
+            "https://maven.fabricmc.net/net/fabricmc/fabric-api/fabric-api/maven-metadata.xml" \
+            "https://maven.fabricmc.net/net/fabricmc/fabric-loader/maven-metadata.xml" \
+            "https://maven.fabricmc.net/net/fabricmc/fabric-loom/fabric-loom-gradle-plugin/maven-metadata.xml" ; do
+            echo "metadata: $U -> $(curl -sSL --max-time 60 -w '%{http_code}' -o "$(basename $(dirname $U))-metadata.xml" "$U")"
+          done
+
+          echo "--- class lists ---"
+          for j in client server fabric-api; do
+            if [ -f "$j.jar" ]; then
+              unzip -l "$j.jar" | awk '{print $4}' | grep '\.class$' | sort > "$j-classes.txt"
+              echo "$j classes: $(wc -l < $j-classes.txt)"
+            fi
+          done
+
+          echo "--- javap ---"
+          CP=""
+          [ -f client.jar ] && CP="client.jar"
+          [ -f server.jar ] && CP="$CP${CP:+:}server.jar"
+          : > api.txt
+          CLASSES="
+          net.minecraft.world.item.Item
+          net.minecraft.world.item.Item\$Properties
+          net.minecraft.world.item.BlockItem
+          net.minecraft.world.item.CreativeModeTab
+          net.minecraft.world.item.CreativeModeTabs
+          net.minecraft.world.item.Items
+          net.minecraft.world.item.ItemStack
+          net.minecraft.world.level.block.Block
+          net.minecraft.world.level.block.Blocks
+          net.minecraft.world.level.block.state.BlockBehaviour
+          net.minecraft.world.level.block.state.BlockBehaviour\$Properties
+          net.minecraft.world.level.block.SoundType
+          net.minecraft.core.Registry
+          net.minecraft.core.registries.BuiltInRegistries
+          net.minecraft.resources.ResourceKey
+          net.minecraft.resources.Identifier
+          net.minecraft.world.food.FoodProperties
+          net.minecraft.world.food.FoodProperties\$Builder
+          net.minecraft.world.item.component.Consumable
+          net.minecraft.world.item.component.Consumables
+          net.minecraft.world.item.consume_effects.ApplyStatusEffectsConsumeEffect
+          net.minecraft.world.effect.MobEffects
+          net.minecraft.commands.Commands
+          net.minecraft.commands.CommandSourceStack
+          net.minecraft.commands.arguments.EntityArgument
+          net.minecraft.network.chat.Component
+          net.minecraft.sounds.SoundEvents
+          net.minecraft.server.level.ServerPlayer
+          net.minecraft.world.entity.player.Player
+          net.minecraft.references.BlockItemId
+          net.minecraft.references.ItemId
+          net.minecraft.world.level.storage.loot.LootTable
+          net.minecraft.world.level.storage.loot.LootPool
+          net.minecraft.world.level.storage.loot.entries.LootItem
+          net.minecraft.world.InteractionResult
+          net.minecraft.world.InteractionHand
+          net.minecraft.world.level.block.state.properties.BooleanProperty
+          net.minecraft.resources.ResourceLocation
+          net.minecraft.world.item.CreativeModeTab\$Builder
+          net.minecraft.world.item.CreativeModeTab\$Output
+          net.minecraft.world.item.CreativeModeTab\$ItemDisplayParameters
+          net.minecraft.world.effect.MobEffectInstance
+          net.minecraft.world.item.ItemCooldowns
+          net.minecraft.world.level.storage.loot.LootTable\$Builder
+          net.minecraft.world.level.storage.loot.LootPool\$Builder
+          net.minecraft.world.item.component.Consumable\$Builder
+          net.minecraft.world.item.BlockItem
+          net.minecraft.world.entity.LivingEntity
+          net.minecraft.world.level.Level
+          net.minecraft.world.item.ItemStack
+          net.minecraft.sounds.SoundEvents
+          net.minecraft.world.item.Items
+          net.minecraft.world.level.block.Blocks
+          net.minecraft.world.item.component.TooltipDisplay
+          net.minecraft.world.item.Item\$TooltipContext
+          net.minecraft.ChatFormatting
+          "
+          for c in $CLASSES; do
+            echo "=================== $c ===================" >> api.txt
+            javap -public -cp "$CP" "$c" >> api.txt 2>&1 || echo "(javap failed)" >> api.txt
+          done
+
+          if [ -f fabric-api.jar ]; then
+            : > fabric-api.txt
+            for c in \
+              net.fabricmc.fabric.api.creativetab.v1.CreativeModeTabEvents \
+              net.fabricmc.fabric.api.creativetab.v1.FabricCreativeModeTab \
+              net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback \
+              net.fabricmc.fabric.api.loot.v3.LootTableEvents \
+              net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents \
+              net.fabricmc.fabric.api.event.player.AttackBlockCallback \
+              net.fabricmc.fabric.api.event.player.UseItemCallback ; do
+              echo "=================== $c ===================" >> fabric-api.txt
+              javap -public -cp "fabric-api.jar:$CP" "$c" >> fabric-api.txt 2>&1 || echo "(javap failed)" >> fabric-api.txt
+            done
+          fi
+
+          echo "--- done ---"
+          ls -la
+
+      - name: upload artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: probe-output
+          path: ci-out/
+          if-no-files-found: warn
+
+      - name: publish results to the branch
+        run: |
+          set +e
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          rm -f ci-out/*.jar
+          git add -f ci-out
+          if git diff --cached --quiet; then
+            echo "nothing to publish"
+            exit 0
+          fi
+          git commit -m "ci: probe results [skip ci]"
+          for i in 1 2 3; do
+            git pull --rebase -X ours origin "${GITHUB_REF_NAME}" && git push origin "HEAD:${GITHUB_REF_NAME}" && break
+            echo "push attempt $i failed, retrying"
+            sleep 5
+          done

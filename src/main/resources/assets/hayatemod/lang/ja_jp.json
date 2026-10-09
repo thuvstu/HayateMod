@@ -1,0 +1,18 @@
+{
+	"creativeTab.hayatemod": "Hayate Mod",
+
+	"item.hayatemod.gale_dust": "疾風の粉",
+	"item.hayatemod.gale_ingot": "疾風のインゴット",
+	"item.hayatemod.storm_fruit": "嵐の果実",
+	"item.hayatemod.gale_charm": "疾風の護符",
+
+	"block.hayatemod.gale_block": "疾風ブロック",
+	"block.hayatemod.gale_lamp": "疾風ランプ",
+
+	"itemTooltip.hayatemod.gale_charm": "ひと吹きの風、そして残るのは塵のみ",
+
+	"message.hayatemod.gale_charm.used": "風がお前を運ぶ！",
+
+	"commands.hayatemod.about": "HayateMod %1$s - 非難読化版 Minecraft %2$s + Fabric API で動作中",
+	"commands.hayatemod.boost.success": "%1$s 人のプレイヤーに %2$s 秒間 移動速度上昇%3$s を付与しました"
+}

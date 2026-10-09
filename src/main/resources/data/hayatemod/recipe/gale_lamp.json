@@ -1,0 +1,21 @@
+{
+	"type": "minecraft:crafting_shaped",
+	"category": "building",
+	"pattern": [
+		" I ",
+		"IGI",
+		" I "
+	],
+	"key": {
+		"I": {
+			"item": "hayatemod:gale_ingot"
+		},
+		"G": {
+			"item": "minecraft:glowstone"
+		}
+	},
+	"result": {
+		"id": "hayatemod:gale_lamp",
+		"count": 4
+	}
+}

@@ -1,0 +1,18 @@
+{
+	"creativeTab.hayatemod": "Hayate Mod",
+
+	"item.hayatemod.gale_dust": "Gale Dust",
+	"item.hayatemod.gale_ingot": "Gale Ingot",
+	"item.hayatemod.storm_fruit": "Storm Fruit",
+	"item.hayatemod.gale_charm": "Gale Charm",
+
+	"block.hayatemod.gale_block": "Gale Block",
+	"block.hayatemod.gale_lamp": "Gale Lamp",
+
+	"itemTooltip.hayatemod.gale_charm": "A burst of wind, then nothing but dust",
+
+	"message.hayatemod.gale_charm.used": "The wind carries you!",
+
+	"commands.hayatemod.about": "HayateMod %1$s - running on unobfuscated Minecraft %2$s with Fabric API",
+	"commands.hayatemod.boost.success": "Gave Speed %3$s to %1$s player(s) for %2$s seconds"
+}

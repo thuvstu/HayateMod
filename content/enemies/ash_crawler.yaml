@@ -1,8 +1,0 @@
-id: solommo:ash_crawler
-name: 灰這い
-level: 14
-rank: trash
-species: spider
-tags: [element:fire]
-skills: [solommo:ash_spit]
-loot: solommo:ash_crawler_loot

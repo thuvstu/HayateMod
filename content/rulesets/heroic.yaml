@@ -1,7 +1,0 @@
-id: solommo:heroic
-extends_global: true
-enemy: { hp_mult: 1.35, effective_dps_mult: 1.2 }
-rewards: { pity_shard_mult: 2.0, craft_material_mult: 1.5 }
-tag_overrides:
-  - tag: rank:boss
-    enemy: { hp_mult: 1.5 }

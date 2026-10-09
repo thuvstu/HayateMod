@@ -1,8 +1,0 @@
-# 釣りスキル（§5.14の2種目）。到達アンロック重視。数値は暫定。
-catch_xp: 20
-levels:
-  - { level: 1, xp_required: 0, unlocks: ["shore"] }
-  - { level: 5, xp_required: 200, unlocks: ["deep_pool"] }
-  - { level: 10, xp_required: 800, unlocks: ["lucky_lure"] }
-  - { level: 15, xp_required: 2000, unlocks: ["treasure_sense"] }
-  - { level: 20, xp_required: 4000, unlocks: ["leviathan"] }

@@ -1,0 +1,32 @@
+{
+	"schemaVersion": 1,
+	"id": "hayatemod",
+	"version": "${version}",
+	"name": "Hayate Mod",
+	"description": "疾風 (Hayate / gale) themed sample mod: gale dust, gale ingots, a lamp, a charm and a command - built for unobfuscated Minecraft 26.3 + Fabric.",
+	"authors": [
+		"thuvstu"
+	],
+	"contact": {
+		"sources": "https://github.com/thuvstu/HayateMod"
+	},
+	"license": "All rights reserved",
+	"icon": "assets/hayatemod/icon.png",
+	"environment": "*",
+	"entrypoints": {
+		"main": [
+			"com.thuvstu.hayatemod.HayateMod",
+			"com.thuvstu.hayatemod.command.HayateModCommands",
+			"com.thuvstu.hayatemod.event.HayateModEvents"
+		],
+		"client": [
+			"com.thuvstu.hayatemod.client.HayateModClient"
+		]
+	},
+	"depends": {
+		"fabricloader": ">=0.19.5",
+		"minecraft": "~26.3",
+		"java": ">=25",
+		"fabric-api": "*"
+	}
+}

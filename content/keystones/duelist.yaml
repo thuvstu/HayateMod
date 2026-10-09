@@ -1,7 +1,0 @@
-id: solommo:duelist
-name: 決闘者
-desc: "近接ダメージ×1.5。"
-chain_bonus: 0
-damage_mult: 1.0
-cooldown_mult: 1.0
-melee_mult: 1.5

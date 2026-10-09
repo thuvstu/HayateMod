@@ -1,0 +1,116 @@
+name: build
+
+# Builds the mod on every push / PR and publishes a GitHub release for `v*` tags.
+#
+# The log (plus a listing of the produced jar) is written back to the branch as
+# ci-out/build-log.txt so it can be read from environments that cannot reach the
+# GitHub Actions log endpoint.
+on:
+  push:
+    paths-ignore:
+      - 'ci-out/**'
+      - '**/*.md'
+    tags:
+      - 'v*'
+  pull_request:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: checkout repository
+        uses: actions/checkout@v6
+
+      - name: setup jdk
+        uses: actions/setup-java@v5
+        with:
+          java-version: '25'
+          distribution: 'microsoft'
+          cache: gradle
+
+      - name: make gradle wrapper executable
+        run: chmod +x ./gradlew
+
+      - name: build
+        run: |
+          set -o pipefail
+          mkdir -p ci-out
+          ./gradlew build --stacktrace 2>&1 | tee ci-out/build-log.txt
+
+      - name: inspect the jar
+        run: |
+          set +e
+          mkdir -p ci-out
+          {
+            echo
+            echo "=== jar contents ==="
+            ls -la build/libs/
+            for jar in build/libs/*.jar; do
+              echo "--- $jar ---"
+              unzip -l "$jar"
+              if unzip -l "$jar" | grep -q "fabric.mod.json"; then
+                echo "--- fabric.mod.json ---"
+                unzip -p "$jar" fabric.mod.json
+              fi
+            done
+          } >> ci-out/build-log.txt
+
+      - name: capture build artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: hayatemod-jar
+          path: build/libs/
+          if-no-files-found: warn
+
+      - name: publish build log to the branch
+        if: always()
+        run: |
+          set +e
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -f ci-out
+          if git diff --cached --quiet; then
+            echo "no log changes"
+            exit 0
+          fi
+          git commit -m "ci: build log [skip ci]"
+          for i in 1 2 3; do
+            git pull --rebase -X ours origin "${GITHUB_REF_NAME}" && git push origin "HEAD:${GITHUB_REF_NAME}" && break
+            echo "push attempt $i failed, retrying"
+            sleep 5
+          done
+
+  release:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - name: checkout repository
+        uses: actions/checkout@v6
+
+      - name: setup jdk
+        uses: actions/setup-java@v5
+        with:
+          java-version: '25'
+          distribution: 'microsoft'
+          cache: gradle
+
+      - name: build
+        run: |
+          chmod +x ./gradlew
+          ./gradlew build
+
+      - name: publish release with the mod jar
+        uses: softprops/action-gh-release@v2
+        with:
+          files: build/libs/*.jar
+          generate_release_notes: true
