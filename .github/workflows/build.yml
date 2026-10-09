@@ -66,6 +66,14 @@ jobs:
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
 
+          # Announcements land in the check run annotations, which makes the same
+          # information readable through the API (handy for automation).
+          modjar=$(ls build/libs/hayatemod-*.jar | grep -v sources | head -n 1)
+          echo "::notice title=jar-file::$(basename "$modjar") size=$(stat -c%s "$modjar")"
+          echo "::notice title=jar-entries::$(unzip -Z1 "$modjar" | wc -l) entries"
+          echo "::notice title=jar-listing::$(unzip -Z1 "$modjar" | tr '\n' ' ')"
+          echo "::notice title=fabric.mod.json::$(unzip -p "$modjar" fabric.mod.json | tr -d '\n' | tr -s ' ')"
+
       - name: report failure tail
         if: failure()
         run: |
