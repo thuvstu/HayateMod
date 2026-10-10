@@ -1,7 +1,7 @@
 package com.thuvstu.hayatemod.entity;
 
 import net.minecraft.core.BlockPos;
-import net.minecraft.server.level.ServerLevelAccessor;
+import net.minecraft.world.level.ServerLevelAccessor;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EntityType;
