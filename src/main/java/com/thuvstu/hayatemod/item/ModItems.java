@@ -193,17 +193,20 @@ public final class ModItems {
 		// Register the custom creative tab.
 		Registry.register(BuiltInRegistries.CREATIVE_MODE_TAB, HAYATE_TAB_KEY, HAYATE_TAB);
 
-		// ... and drop the raw materials and craftable parts into the vanilla
-		// ingredients tab as well.
+		// ... and drop the raw materials into the vanilla ingredients tab as well.
 		CreativeModeTabEvents.modifyOutputEvent(CreativeModeTabs.INGREDIENTS).register(output -> {
 			output.accept(ModItems.GALE_DUST);
 			output.accept(ModItems.GALE_INGOT);
-			output.accept(ModItems.GALE_FEATHER);
-			output.accept(ModItems.GALE_ORB);
 		});
 
 		CreativeModeTabEvents.modifyOutputEvent(CreativeModeTabs.FOOD_AND_DRINKS)
 				.register(output -> output.accept(ModItems.STORM_FRUIT));
+
+		// The craftable parts belong with the other ingredients...
+		CreativeModeTabEvents.modifyOutputEvent(CreativeModeTabs.INGREDIENTS).register(output -> {
+			output.accept(ModItems.GALE_FEATHER);
+			output.accept(ModItems.GALE_ORB);
+		});
 
 		// ... and the gear next to the vanilla equivalents.
 		CreativeModeTabEvents.modifyOutputEvent(CreativeModeTabs.COMBAT).register(output -> {

@@ -1,7 +1,9 @@
 {
 	"type": "minecraft:blasting",
 	"category": "misc",
-	"ingredient": "hayatemod:gale_dust",
+	"ingredient": {
+		"item": "hayatemod:gale_dust"
+	},
 	"result": {
 		"id": "hayatemod:gale_ingot",
 		"count": 1

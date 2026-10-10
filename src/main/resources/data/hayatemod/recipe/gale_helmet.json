@@ -3,10 +3,12 @@
 	"category": "equipment",
 	"pattern": [
 		"III",
-		"I I"
+		"I.I"
 	],
 	"key": {
-		"I": "hayatemod:gale_ingot"
+		"I": {
+			"item": "hayatemod:gale_ingot"
+		}
 	},
 	"result": {
 		"id": "hayatemod:gale_helmet"

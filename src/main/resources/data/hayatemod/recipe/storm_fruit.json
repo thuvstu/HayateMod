@@ -1,10 +1,16 @@
 {
 	"type": "minecraft:crafting_shapeless",
-	"category": "misc",
+	"category": "food",
 	"ingredients": [
-		"minecraft:apple",
-		"hayatemod:gale_dust",
-		"minecraft:sugar"
+		{
+			"item": "minecraft:apple"
+		},
+		{
+			"item": "hayatemod:gale_dust"
+		},
+		{
+			"item": "minecraft:sugar"
+		}
 	],
 	"result": {
 		"id": "hayatemod:storm_fruit",

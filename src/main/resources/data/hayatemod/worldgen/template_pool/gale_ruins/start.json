@@ -3,12 +3,11 @@
  "elements": [
   {
    "weight": 1,
-    "element": {
-      "element_type": "minecraft:legacy_single_pool_element",
-      "location": "hayatemod:gale_ruins/ruin_1",
-      "processors": "minecraft:empty",
-      "projection": "rigid"
-    }
+   "element": {
+    "element_type": "minecraft:legacy_single_pool_element",
+    "location": "hayatemod:gale_ruins/ruin_1",
+    "projection": "rigid"
+   }
   }
  ]
 }

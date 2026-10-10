@@ -2,9 +2,15 @@
 	"type": "minecraft:crafting_shapeless",
 	"category": "misc",
 	"ingredients": [
-		"hayatemod:gale_charm",
-		"hayatemod:gale_orb",
-		"hayatemod:gale_feather"
+		{
+			"item": "hayatemod:gale_charm"
+		},
+		{
+			"item": "hayatemod:gale_orb"
+		},
+		{
+			"item": "hayatemod:gale_feather"
+		}
 	],
 	"result": {
 		"id": "hayatemod:greater_gale_charm"

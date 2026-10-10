@@ -6,7 +6,6 @@ import org.slf4j.LoggerFactory;
 import net.minecraft.resources.Identifier;
 
 import net.fabricmc.api.ModInitializer;
-import net.fabricmc.loader.api.FabricLoader;
 
 import com.thuvstu.hayatemod.block.ModBlocks;
 import com.thuvstu.hayatemod.entity.ModEntities;
@@ -31,10 +30,7 @@ public class HayateMod implements ModInitializer {
 		// This code runs as soon as Minecraft is in a mod-load-ready state.
 		// However, some things (like resources) may still be uninitialized.
 		// Proceed with mild caution.
-		String minecraftVersion = FabricLoader.getInstance().getModContainer("minecraft")
-				.map(container -> container.getMetadata().getVersion().getFriendlyString())
-				.orElse("unknown");
-		LOGGER.info("HayateMod: booting on Minecraft {} (unobfuscated)", minecraftVersion);
+		LOGGER.info("HayateMod: booting on Minecraft {} (unobfuscated)", "26.3");
 
 		// Touching these classes runs their static initialisers, which is where every
 		// registry entry of this mod is created. Static initialisation is the pattern

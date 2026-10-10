@@ -2,7 +2,9 @@
 	"type": "minecraft:crafting_shapeless",
 	"category": "misc",
 	"ingredients": [
-		"hayatemod:gale_block"
+		{
+			"item": "hayatemod:gale_block"
+		}
 	],
 	"result": {
 		"id": "hayatemod:gale_ingot",

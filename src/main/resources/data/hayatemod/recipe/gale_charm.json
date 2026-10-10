@@ -7,8 +7,12 @@
 		" I "
 	],
 	"key": {
-		"D": "hayatemod:gale_dust",
-		"I": "hayatemod:gale_ingot"
+		"D": {
+			"item": "hayatemod:gale_dust"
+		},
+		"I": {
+			"item": "hayatemod:gale_ingot"
+		}
 	},
 	"result": {
 		"id": "hayatemod:gale_charm",

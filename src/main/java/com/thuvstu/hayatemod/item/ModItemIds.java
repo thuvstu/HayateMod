@@ -21,7 +21,7 @@ public final class ModItemIds {
 	public static final ResourceKey<Item> STORM_FRUIT = create("storm_fruit");
 	public static final ResourceKey<Item> GALE_CHARM = create("gale_charm");
 
-	// materials, tools and reusable items
+	// second batch: materials, tools and a reusable staff
 	public static final ResourceKey<Item> GALE_FEATHER = create("gale_feather");
 	public static final ResourceKey<Item> GALE_ORB = create("gale_orb");
 	public static final ResourceKey<Item> GALE_BLADE = create("gale_blade");
@@ -29,10 +29,10 @@ public final class ModItemIds {
 	public static final ResourceKey<Item> GALE_STAFF = create("gale_staff");
 	public static final ResourceKey<Item> GREATER_GALE_CHARM = create("greater_gale_charm");
 
-	// the gale fan
+	// fourth batch: the gale fan
 	public static final ResourceKey<Item> GALE_FAN = create("gale_fan");
 
-	// the gale armour set
+	// third batch: the gale armour set
 	public static final ResourceKey<Item> GALE_HELMET = create("gale_helmet");
 	public static final ResourceKey<Item> GALE_CHESTPLATE = create("gale_chestplate");
 	public static final ResourceKey<Item> GALE_LEGGINGS = create("gale_leggings");

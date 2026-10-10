@@ -7,7 +7,9 @@
 		"###"
 	],
 	"key": {
-		"#": "hayatemod:gale_ingot"
+		"#": {
+			"item": "hayatemod:gale_ingot"
+		}
 	},
 	"result": {
 		"id": "hayatemod:gale_block",

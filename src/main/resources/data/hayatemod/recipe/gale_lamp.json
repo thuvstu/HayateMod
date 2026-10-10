@@ -7,8 +7,12 @@
 		" I "
 	],
 	"key": {
-		"I": "hayatemod:gale_ingot",
-		"G": "minecraft:glowstone"
+		"I": {
+			"item": "hayatemod:gale_ingot"
+		},
+		"G": {
+			"item": "minecraft:glowstone"
+		}
 	},
 	"result": {
 		"id": "hayatemod:gale_lamp",
