@@ -24,6 +24,7 @@
 	"commands.hayatemod.loctp.invalid": "Unknown structure or tag: %1$s",
 	"commands.hayatemod.loctp.not_found": "No %1$s found within range",
 	"commands.hayatemod.loctp.success": "Teleported to %1$s at %2$s, %3$s, %4$s",
+	"commands.hayatemod.giveall.success": "Gave %1$s kind(s) of gale gear to %2$s player(s)",
 	"item.hayatemod.gale_feather": "Gale Feather",
 	"item.hayatemod.gale_orb": "Gale Orb",
 	"item.hayatemod.gale_blade": "Gale Blade",

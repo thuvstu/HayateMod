@@ -1,5 +1,6 @@
 package com.thuvstu.hayatemod.item;
 
+import java.util.List;
 import java.util.function.Function;
 
 import net.minecraft.core.Registry;
@@ -138,6 +139,34 @@ public final class ModItems {
 			GreaterGaleCharmItem::new, new Item.Properties().stacksTo(16)
 					.component(DataComponents.LORE, ItemUsage.lore("itemTooltip.hayatemod.greater_gale_charm")));
 
+	/**
+	 * Every obtainable thing this mod adds, in tab order. Blocks contribute
+	 * their block item. Used by the creative tab and {@code /hayate giveall}.
+	 */
+	public static List<Item> all() {
+		return List.of(
+				GALE_DUST,
+				GALE_INGOT,
+				STORM_FRUIT,
+				GALE_CHARM,
+				GREATER_GALE_CHARM,
+				GALE_FEATHER,
+				GALE_ORB,
+				GALE_BLADE,
+				GALE_PICKAXE,
+				GALE_STAFF,
+				GALE_FAN,
+				GALE_HELMET,
+				GALE_CHESTPLATE,
+				GALE_LEGGINGS,
+				GALE_BOOTS,
+				ModBlocks.GALE_BLOCK.asItem(),
+				ModBlocks.GALE_LAMP.asItem(),
+				ModBlocks.GALE_ORE.asItem(),
+				ModBlocks.DEEPSLATE_GALE_ORE.asItem(),
+				ModBlocks.GALE_ASH.asItem());
+	}
+
 	// ---------------------------------------------------------- creative tab
 
 	public static final ResourceKey<CreativeModeTab> HAYATE_TAB_KEY = ResourceKey.create(
@@ -155,28 +184,9 @@ public final class ModItems {
 			.icon(() -> new ItemStack(ModItems.GALE_INGOT))
 			.title(Component.translatable("creativeTab.hayatemod"))
 			.displayItems((params, output) -> {
-				output.accept(ModItems.GALE_DUST);
-				output.accept(ModItems.GALE_INGOT);
-				output.accept(ModItems.STORM_FRUIT);
-				output.accept(ModItems.GALE_CHARM);
-				output.accept(ModItems.GREATER_GALE_CHARM);
-				output.accept(ModItems.GALE_FEATHER);
-				output.accept(ModItems.GALE_ORB);
-				output.accept(ModItems.GALE_BLADE);
-				output.accept(ModItems.GALE_PICKAXE);
-				output.accept(ModItems.GALE_STAFF);
-				output.accept(ModItems.GALE_FAN);
-				output.accept(ModItems.GALE_HELMET);
-				output.accept(ModItems.GALE_CHESTPLATE);
-				output.accept(ModItems.GALE_LEGGINGS);
-				output.accept(ModItems.GALE_BOOTS);
-
-				// The tab builder also accepts blocks (via their BlockItem).
-				output.accept(ModBlocks.GALE_BLOCK);
-				output.accept(ModBlocks.GALE_LAMP);
-				output.accept(ModBlocks.GALE_ORE);
-				output.accept(ModBlocks.DEEPSLATE_GALE_ORE);
-				output.accept(ModBlocks.GALE_ASH);
+				for (Item item : ModItems.all()) {
+					output.accept(item);
+				}
 			})
 			.build();
 

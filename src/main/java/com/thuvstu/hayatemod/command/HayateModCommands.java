@@ -26,6 +26,8 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.levelgen.structure.Structure;
 import net.minecraft.world.level.portal.TeleportTransition;
 import net.minecraft.world.phys.Vec3;
@@ -35,6 +37,7 @@ import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.fabricmc.loader.api.FabricLoader;
 
 import com.thuvstu.hayatemod.HayateMod;
+import com.thuvstu.hayatemod.item.ModItems;
 
 /**
  * Registers {@code /hayate} and {@code /loctp}:
@@ -42,6 +45,7 @@ import com.thuvstu.hayatemod.HayateMod;
  * <pre>
  * /hayate about
  * /hayate boost [targets] [seconds] [amplifier]   (permission level 2)
+ * /hayate giveall [targets]                       (permission level 2)
  * /loctp &lt;structure|#tag&gt;                    (permission level 2)
  * </pre>
  *
@@ -99,9 +103,22 @@ public class HayateModCommands implements ModInitializer {
 							DEFAULT_DURATION_SECONDS, DEFAULT_AMPLIFIER))
 					.then(targets);
 
+			// /hayate giveall [targets]
+			var giveTargets = Commands.argument("targets", EntityArgument.players())
+					.executes(context -> executeGiveAll(context,
+							EntityArgument.getPlayers(context, "targets")));
+
+			// /hayate giveall  (self)
+			var giveall = Commands.literal("giveall")
+					.requires(source -> source.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER))
+					.executes(context -> executeGiveAll(context,
+							List.of(context.getSource().getPlayerOrException())))
+					.then(giveTargets);
+
 			dispatcher.register(Commands.literal("hayate")
 					.then(Commands.literal("about").executes(HayateModCommands::executeAbout))
-					.then(boost));
+					.then(boost)
+					.then(giveall));
 
 			// /loctp <structure|#tag>
 			var structure = Commands
@@ -146,6 +163,32 @@ public class HayateModCommands implements ModInitializer {
 
 		context.getSource().sendSuccess(() -> Component.translatable("commands.hayatemod.boost.success",
 				targets.size(), seconds, amplifier + 1), true);
+
+		return targets.size();
+	}
+
+	/**
+	 * Hands one of everything to each target, mirroring vanilla {@code /give}:
+	 * into the inventory first, leftovers dropped at their feet.
+	 */
+	private static int executeGiveAll(CommandContext<CommandSourceStack> context,
+			Collection<ServerPlayer> targets) throws CommandSyntaxException {
+		List<Item> items = ModItems.all();
+
+		for (ServerPlayer player : targets) {
+			for (Item item : items) {
+				ItemStack stack = new ItemStack(item);
+				player.getInventory().add(stack);
+				if (stack.isEmpty()) {
+					player.containerMenu.broadcastChanges();
+				} else {
+					player.createItemStackToDrop(stack, false, false);
+				}
+			}
+		}
+
+		context.getSource().sendSuccess(() -> Component.translatable("commands.hayatemod.giveall.success",
+				items.size(), targets.size()), true);
 
 		return targets.size();
 	}

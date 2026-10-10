@@ -63,8 +63,10 @@ public final class EnenSaveData extends SavedData {
 	public record Packed(Map<UUID, Stats> players) {
 		public static final Packed EMPTY = new Packed(Map.of());
 
+		// Map keys must encode as strings (NBT object keys): UUIDUtil.CODEC is
+		// an int array and blows up the world save with "Not a string".
 		public static final Codec<Packed> CODEC = RecordCodecBuilder.create(i -> i.group(
-				Codec.unboundedMap(UUIDUtil.CODEC, Stats.CODEC)
+				Codec.unboundedMap(UUIDUtil.STRING_CODEC, Stats.CODEC)
 						.optionalFieldOf("players", Map.of())
 						.forGetter(Packed::players)
 		).apply(i, Packed::new));
