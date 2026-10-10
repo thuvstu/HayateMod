@@ -34,7 +34,8 @@ import com.thuvstu.hayatemod.block.ModBlocks;
  * first/last row of the corridor, so a source block can never flow out.
  */
 public final class AzemichiTerrain {
-	private static final int HALF_WIDTH = 12;
+	/** The corridor spans centerX +/- HALF_WIDTH; the session uses this to know "on the path". */
+	public static final int HALF_WIDTH = 12;
 
 	private AzemichiTerrain() {
 	}

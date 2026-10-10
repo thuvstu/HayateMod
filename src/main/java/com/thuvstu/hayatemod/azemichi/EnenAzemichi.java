@@ -20,6 +20,7 @@ import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.RemovalReason;
 import net.minecraft.world.entity.Spider;
+import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.item.ItemStack;
@@ -164,6 +165,7 @@ public final class EnenAzemichi implements ModInitializer {
 
 		spawnEvents(level, session);
 		spawnYokai(level, session);
+		spawnLoot(level, session);
 		if (bossRun) {
 			spawnBishatatsu(level, session);
 		}
@@ -272,6 +274,14 @@ public final class EnenAzemichi implements ModInitializer {
 
 			if (session.isGoalReached(player)) {
 				onGoalReached(level, session, player);
+				continue;
+			}
+
+			// The alley only goes forward: one gentle nudge if they wander back a lot.
+			int farthestZ = session.startZ() + session.farthestMeters() / METERS_PER_BLOCK;
+			if (session.farthestMeters() >= 100 && farthestZ - player.getZ() >= 20.0D
+					&& session.announce("back")) {
+				player.sendSystemMessage(msg("enen.hayatemod.milestone.back"));
 			}
 		}
 	}
@@ -280,7 +290,8 @@ public final class EnenAzemichi implements ModInitializer {
 	private void onGoalReached(ServerLevel level, EnenSession session, ServerPlayer player) {
 		if (session.isBossRun() && bossAlive(level, session)) {
 			if (session.announce("boss_warn")) {
-				player.sendSystemMessage(msg("enen.hayatemod.boss.blocked"));
+				player.sendSystemMessage(Component.translatable("enen.hayatemod.boss.blocked")
+						.withStyle(ChatFormatting.DARK_RED));
 				level.playSound(null, player.getX(), player.getY(), player.getZ(),
 						SoundEvents.ENTITY_ELDER_GUARDIAN_CURSE, SoundSource.HOSTILE, 1.0F, 0.7F);
 			}
@@ -322,6 +333,10 @@ public final class EnenAzemichi implements ModInitializer {
 				SoundEvents.ENTITY_PLAYER_LEVELUP, SoundSource.PLAYERS, 1.0F, 1.2F);
 		level.sendParticles(ParticleTypes.HAPPY_VILLAGER, player.getX(), player.getY() + 1, player.getZ(),
 				24, 0.6, 0.4, 0.6, 0.3);
+		level.sendParticles(ParticleTypes.END_ROD, player.getX(), player.getY() + 1.5, player.getZ(),
+				30, 0.8, 0.5, 0.8, 0.2);
+		level.sendParticles(ParticleTypes.CLOUD, player.getX(), player.getY() + 0.5, player.getZ(),
+				20, 1.0, 0.5, 1.0, 0.02);
 
 		// Beyond the torii, facing back at it (yaw 180 = -Z).
 		player.teleport(new TeleportTransition(level,
@@ -431,6 +446,12 @@ public final class EnenAzemichi implements ModInitializer {
 		session.setBossUuid(boss.getUUID());
 		level.playSound(null, boss.getX(), boss.getY(), boss.getZ(),
 				SoundEvents.BLOCK_BEACON_ACTIVATE, SoundSource.NEUTRAL, 1.0F, 0.6F);
+
+		ServerPlayer owner = level.getServer().getPlayerList().getPlayer(session.playerId());
+		if (owner != null) {
+			owner.sendSystemMessage(Component.translatable("enen.hayatemod.boss.spawn")
+					.withStyle(ChatFormatting.DARK_RED));
+		}
 	}
 
 	/** Attribute sets differ per mob; a missing attribute is simply skipped. */
@@ -672,6 +693,27 @@ public final class EnenAzemichi implements ModInitializer {
 		spawnYokai(level, session, x, player.getY() + 0.5, z, rank);
 	}
 
+	/** A few free gifts lying on the path, like the items you find along the way. */
+	private void spawnLoot(ServerLevel level, EnenSession session) {
+		int count = 3 + level.random.nextInt(3);
+		int span = Math.max(1, session.goalZ() - session.startZ() - 40);
+		for (int i = 0; i < count; i++) {
+			int z = session.startZ() + 20 + level.random.nextInt(span);
+			int x = session.centerX() + level.random.nextInt(3) - 1;
+			ItemStack stack = switch (level.random.nextInt(5)) {
+				case 0 -> new ItemStack(Items.APPLE);
+				case 1 -> new ItemStack(Items.BREAD, 1 + level.random.nextInt(2));
+				case 2 -> new ItemStack(ModItems.GALE_DUST);
+				case 3 -> new ItemStack(Items.SUGAR);
+				default -> new ItemStack(ModItems.GALE_FEATHER);
+			};
+			ItemEntity item = new ItemEntity(level, x + 0.5, session.surfaceY() + 1.2, z + 0.5, stack);
+			item.setPickupDelay(20);
+			level.addFreshEntity(item);
+			session.trackEvent(item.getUUID());
+		}
+	}
+
 	// ------------------------------------------------------------------ death
 
 	/** The death hook: yokai of active runs drop their rewards on the killer. */
@@ -807,17 +849,24 @@ public final class EnenAzemichi implements ModInitializer {
 		int meters = session.farthestMeters();
 		int goal = session.goalMeters();
 		if (meters >= 1000 && session.announce("1000")) {
-			player.sendSystemMessage(msg("enen.hayatemod.milestone.1000"));
+			milestone(player, "enen.hayatemod.milestone.1000");
 		}
 		if (meters >= goal / 2 && session.announce("half")) {
-			player.sendSystemMessage(msg("enen.hayatemod.milestone.half"));
+			milestone(player, "enen.hayatemod.milestone.half");
 		}
 		if (goal - meters <= 500 && session.announce("500")) {
-			player.sendSystemMessage(msg("enen.hayatemod.milestone.500"));
+			milestone(player, "enen.hayatemod.milestone.500");
 		}
 		if (goal - meters <= 200 && session.announce("200")) {
-			player.sendSystemMessage(msg("enen.hayatemod.milestone.200"));
+			milestone(player, "enen.hayatemod.milestone.200");
 		}
+	}
+
+	/** Milestone message + a little chime. */
+	private static void milestone(ServerPlayer player, String key) {
+		player.sendSystemMessage(msg(key));
+		player.level().playSound(null, player.getX(), player.getY(), player.getZ(),
+				SoundEvents.UI_BUTTON_CLICK, SoundSource.PLAYERS, 0.5F, 1.6F);
 	}
 
 	/** The base goal of the (clears + 1)-st run: the game's classic numbers. */
@@ -826,8 +875,12 @@ public final class EnenAzemichi implements ModInitializer {
 		return Mth.min(bases[Mth.clamp(clears, 0, bases.length - 1)], MAX_METERS);
 	}
 
+	/** Hands an item out; a full inventory drops the remainder at the player's feet. */
 	private static void give(ServerPlayer player, ItemStack stack) {
-		player.getInventory().add(stack);
+		ItemStack leftover = player.getInventory().add(stack);
+		if (!leftover.isEmpty()) {
+			player.drop(leftover, false);
+		}
 	}
 
 	private static Component msg(String key, Object... args) {

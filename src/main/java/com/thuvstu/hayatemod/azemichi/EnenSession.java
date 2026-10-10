@@ -151,8 +151,17 @@ public final class EnenSession {
 		return player.getZ() >= this.goalZ() + 0.3D && Math.abs(player.getX() - this.centerX()) <= 8.0D;
 	}
 
-	/** Distance walked so far, in the game's friendly meters (never negative). */
+	/**
+	 * Distance walked so far, in the game's friendly meters (never negative).
+	 *
+	 * <p>The counter only moves while the player is on the corridor: wandering the
+	 * fields to the side, or cutting straight across the world, does not shorten
+	 * the alley.
+	 */
 	public int metersNow(ServerPlayer player) {
+		if (Math.abs(player.getX() - this.centerX) > AzemichiTerrain.HALF_WIDTH + 2) {
+			return this.farthestMeters;
+		}
 		int blocks = Mth.clamp((int) (player.getZ() - this.startZ), 0,
 				EnenAzemichi.MAX_METERS / EnenAzemichi.METERS_PER_BLOCK);
 		return blocks * EnenAzemichi.METERS_PER_BLOCK;
