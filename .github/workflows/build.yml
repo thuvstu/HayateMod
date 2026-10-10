@@ -111,10 +111,15 @@ jobs:
           import pathlib, re
           log = pathlib.Path('build/ci/build-log.txt')
           text = log.read_text(errors='replace') if log.exists() else ''
-          lines = [line for line in text.splitlines()
-                   if re.search(r'error:|warning:|FAILED|\* What went wrong|\* Try:|Could not resolve|Execution failed', line)]
+          raw = text.splitlines()
+          lines = []
+          for index, line in enumerate(raw):
+              if re.search(r'error:|warning:|FAILED|\* What went wrong|\* Try:|Could not resolve|Execution failed', line):
+                  # javac prints the offending source line and a caret *after* the
+                  # summary, and those are the lines that say which symbol is missing.
+                  lines.extend(raw[index:index + 6])
           if not lines:
-              lines = text.splitlines()[-60:]
+              lines = raw[-60:]
           chunk, chunks = [], []
           for line in lines:
               chunk.append(line)

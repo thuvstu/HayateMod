@@ -187,6 +187,16 @@ def check_data_references(item_ids: set[str], block_ids: set[str]) -> None:
 		if name not in known and not (DATA / "enchantment" / f"{name}.json").exists():
 			fail(f"{where}: unknown id {value}")
 
+	def check_entries(entries: object, where: str) -> None:
+		"""Loot entries nest: alternatives / group / sequence all carry children."""
+		if not isinstance(entries, list):
+			return
+		for entry in entries:
+			if not isinstance(entry, dict):
+				continue
+			check_id(entry.get("name"), where)
+			check_entries(entry.get("children"), where)
+
 	# worldgen: the placed feature must exist and match ModWorldgen
 	placed = DATA / "worldgen" / "placed_feature"
 	for path in sorted(placed.glob("*.json")):
@@ -223,8 +233,7 @@ def check_data_references(item_ids: set[str], block_ids: set[str]) -> None:
 			continue
 		check_id(path.stem, f"loot_table/blocks/{path.name}")
 		for pool in content.get("pools", []):
-			for entry in pool.get("entries", []):
-				check_id(entry.get("name"), f"loot_table/blocks/{path.name}")
+			check_entries(pool.get("entries"), f"loot_table/blocks/{path.name}")
 		if path.stem not in block_ids:
 			fail(f"loot_table/blocks/{path.name}: no such block")
 
@@ -239,8 +248,7 @@ def check_data_references(item_ids: set[str], block_ids: set[str]) -> None:
 			if content is None:
 				continue
 			for pool in content.get("pools", []):
-				for entry in pool.get("entries", []):
-					check_id(entry.get("name"), f"loot_table/{kind}/{path.name}")
+				check_entries(pool.get("entries"), f"loot_table/{kind}/{path.name}")
 
 	# ... and an entity loot table only makes sense for a registered entity id
 	registered = set()
@@ -262,6 +270,12 @@ def check_data_references(item_ids: set[str], block_ids: set[str]) -> None:
 			check_id(entry.get("item") if isinstance(entry, dict) else entry, f"recipe/{path.name}")
 		ingredient = content.get("ingredient")
 		check_id(ingredient.get("item") if isinstance(ingredient, dict) else ingredient, f"recipe/{path.name}")
+		# shaped recipes put theirs in "key": {"S": {"item": ...}}
+		for symbol, value in (content.get("key") or {}).items():
+			if isinstance(value, dict):
+				check_id(value.get("item"), f"recipe/{path.name} (key {symbol})")
+			else:
+				check_id(value, f"recipe/{path.name} (key {symbol})")
 
 	# every block of ours should be harvestable with some tool
 	tagged = set()

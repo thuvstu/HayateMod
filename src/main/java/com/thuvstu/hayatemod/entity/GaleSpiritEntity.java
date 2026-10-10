@@ -47,7 +47,7 @@ public class GaleSpiritEntity extends PathfinderMob {
 	 * Spawn rule for {@code FabricEntityType.Builder}: a spirit only appears where there
 	 * is room for it, so it never ends up inside a block.
 	 */
-	public static boolean checkSpiritSpawnRules(EntityType<? extends GaleSpiritEntity> type,
+	public static boolean checkSpiritSpawnRules(EntityType<GaleSpiritEntity> type,
 			ServerLevelAccessor level, EntitySpawnReason reason, BlockPos pos, RandomSource random) {
 		return level.getBlockState(pos).isAir() && level.getBlockState(pos.above()).isAir();
 	}
