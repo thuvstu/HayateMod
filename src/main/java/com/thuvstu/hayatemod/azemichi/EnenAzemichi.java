@@ -422,6 +422,8 @@ public final class EnenAzemichi implements ModInitializer {
 				: rank == 1 ? "enen.hayatemod.yokai.1" : "enen.hayatemod.yokai.2";
 		spirit.setCustomName(Component.translatable(nameKey));
 		spirit.setCustomNameVisible(true);
+		// The alley's spirits are not the harmless drifters: they hunt.
+		spirit.setHostile(true);
 		level.addFreshEntity(spirit);
 		session.trackMob(spirit.getUUID(), rank == 0 ? EnenSession.YokaiKind.SPIRIT_0
 				: rank == 1 ? EnenSession.YokaiKind.SPIRIT_1 : EnenSession.YokaiKind.SPIRIT_2);
@@ -441,6 +443,7 @@ public final class EnenAzemichi implements ModInitializer {
 		boss.getAttribute(Attributes.FLYING_SPEED).setBaseValue(0.8);
 		boss.setCustomName(Component.translatable("enen.hayatemod.yokai.bishatatsu"));
 		boss.setCustomNameVisible(true);
+		boss.setHostile(true);
 		level.addFreshEntity(boss);
 		session.trackMob(boss.getUUID(), EnenSession.YokaiKind.BISHATATSU);
 		session.setBossUuid(boss.getUUID());
