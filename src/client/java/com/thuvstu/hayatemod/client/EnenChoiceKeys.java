@@ -1,13 +1,11 @@
 package com.thuvstu.hayatemod.client;
 
-import org.lwjgl.glfw.GLFW;
-
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.KeyMapping;
-import net.minecraft.client.input.InputConstants;
+import com.mojang.blaze3d.platform.InputConstants;
 
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
-import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
+import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 
 import com.thuvstu.hayatemod.azemichi.EnenChoiceC2SPayload;
@@ -22,19 +20,19 @@ import com.thuvstu.hayatemod.azemichi.EnenChoiceC2SPayload;
  */
 public final class EnenChoiceKeys {
 	public static final KeyMapping CHOICE_A = new KeyMapping("key.hayatemod.choice_a",
-			InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_1, "category.hayatemod.keys");
+			InputConstants.Type.KEYBOARD, InputConstants.KEY_1, "category.hayatemod.keys");
 	public static final KeyMapping CHOICE_B = new KeyMapping("key.hayatemod.choice_b",
-			InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_2, "category.hayatemod.keys");
+			InputConstants.Type.KEYBOARD, InputConstants.KEY_2, "category.hayatemod.keys");
 	public static final KeyMapping CHOICE_C = new KeyMapping("key.hayatemod.choice_c",
-			InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_3, "category.hayatemod.keys");
+			InputConstants.Type.KEYBOARD, InputConstants.KEY_3, "category.hayatemod.keys");
 
 	private EnenChoiceKeys() {
 	}
 
 	public static void init() {
-		KeyBindingHelper.registerKeyBinding(CHOICE_A);
-		KeyBindingHelper.registerKeyBinding(CHOICE_B);
-		KeyBindingHelper.registerKeyBinding(CHOICE_C);
+		KeyMappingHelper.registerKeyMapping(CHOICE_A);
+		KeyMappingHelper.registerKeyMapping(CHOICE_B);
+		KeyMappingHelper.registerKeyMapping(CHOICE_C);
 		ClientTickEvents.END_CLIENT_TICK.register(EnenChoiceKeys::onTick);
 	}
 

@@ -17,6 +17,8 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 
+import com.thuvstu.hayatemod.util.Particles;
+
 /**
  * A reusable staff: right-clicking pushes the holder along their look direction.
  *
@@ -58,8 +60,8 @@ public class GaleStaffItem extends Item {
 		level.playSound(null, user.getX(), user.getY(), user.getZ(), SoundEvents.WIND_CHARGE_THROW,
 				SoundSource.PLAYERS, 1.0F, 1.2F);
 		if (level instanceof ServerLevel serverLevel) {
-			serverLevel.sendParticles(ParticleTypes.CLOUD, user.getX(), user.getY() + 0.5, user.getZ(),
-					12, 0.4, 0.3, 0.4, 0.02);
+			Particles.burst(serverLevel, ParticleTypes.CLOUD, user.getX(), user.getY() + 0.5, user.getZ(),
+					12, 0.4, 0.3, 0.4);
 		}
 
 		// Cooldown declared on the item, and one durability point per dash.

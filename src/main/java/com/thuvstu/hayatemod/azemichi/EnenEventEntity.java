@@ -3,10 +3,11 @@ package com.thuvstu.hayatemod.azemichi;
 import java.util.UUID;
 
 import net.minecraft.core.BlockPos;
-import net.minecraft.nbt.CompoundTag;
+import net.minecraft.core.UUIDUtil;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.RandomSource;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EntityType;
@@ -16,6 +17,8 @@ import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.world.phys.Vec3;
 
 import com.thuvstu.hayatemod.entity.ModEntities;
@@ -43,7 +46,6 @@ public class EnenEventEntity extends Mob {
 		super(type, level);
 		this.setNoGravity(true);
 		this.setInvulnerable(true);
-		this.setPushedByItems(false);
 	}
 
 	/** Spawns the marker at {@code position} and hands it to the level. */
@@ -93,7 +95,7 @@ public class EnenEventEntity extends Mob {
 	}
 
 	@Override
-	public InteractionResult mobInteract(Player player) {
+	protected InteractionResult mobInteract(Player player, InteractionHand hand) {
 		if (player.level().isClientSide()) {
 			return InteractionResult.SUCCESS;
 		}
@@ -111,23 +113,21 @@ public class EnenEventEntity extends Mob {
 	}
 
 	@Override
-	public void addAdditionalSaveData(CompoundTag tag) {
-		super.addAdditionalSaveData(tag);
-		tag.putInt("EventType", this.type.ordinal());
-		tag.putInt("Progress", this.progress);
-		tag.putBoolean("Used", this.used);
-		tag.putUUID("Owner", this.owner);
+	protected void addAdditionalSaveData(ValueOutput output) {
+		super.addAdditionalSaveData(output);
+		output.putInt("EventType", this.type.ordinal());
+		output.putInt("Progress", this.progress);
+		output.putBoolean("Used", this.used);
+		output.store("Owner", UUIDUtil.CODEC, this.owner);
 	}
 
 	@Override
-	public void readAdditionalSaveData(CompoundTag tag) {
-		super.readAdditionalSaveData(tag);
-		this.type = EnenEventType.byId(tag.getInt("EventType"));
-		this.progress = tag.getInt("Progress");
-		this.used = tag.getBoolean("Used");
-		if (tag.hasUUID("Owner")) {
-			this.owner = tag.getUUID("Owner");
-		}
+	protected void readAdditionalSaveData(ValueInput input) {
+		super.readAdditionalSaveData(input);
+		this.type = EnenEventType.byId(input.getIntOr("EventType", 0));
+		this.progress = input.getIntOr("Progress", 0);
+		this.used = input.getBooleanOr("Used", false);
+		input.read("Owner", UUIDUtil.CODEC).ifPresent(this::owner);
 		this.applyName();
 	}
 
@@ -155,5 +155,9 @@ public class EnenEventEntity extends Mob {
 	/** The UUID of the player whose run owns this marker. */
 	public UUID ownerId() {
 		return this.owner;
+	}
+
+	private void owner(UUID owner) {
+		this.owner = owner;
 	}
 }

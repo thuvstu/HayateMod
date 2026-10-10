@@ -88,7 +88,7 @@ public class GaleSpiritEntity extends PathfinderMob {
 	}
 
 	/** Only battle-form spirits may choose a target. */
-	private boolean canAttack(LivingEntity living) {
+	private boolean canAttack(LivingEntity living, net.minecraft.server.level.ServerLevel level) {
 		return this.hostile && living instanceof Player;
 	}
 

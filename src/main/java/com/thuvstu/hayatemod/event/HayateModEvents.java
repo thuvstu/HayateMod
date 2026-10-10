@@ -21,6 +21,7 @@ import net.fabricmc.fabric.api.loot.v3.LootTableEvents;
 
 import com.thuvstu.hayatemod.HayateMod;
 import com.thuvstu.hayatemod.item.ModItems;
+import com.thuvstu.hayatemod.util.Particles;
 
 /**
  * The Fabric API event hooks of the mod.
@@ -68,8 +69,8 @@ public class HayateModEvents implements ModInitializer {
 			player.addEffect(new MobEffectInstance(MobEffects.SPEED, 60, 0, true, false));
 
 			if (player.level() instanceof ServerLevel level && player.getRandom().nextInt(3) == 0) {
-				level.sendParticles(ParticleTypes.CLOUD, player.getX(), player.getY() + 0.2, player.getZ(),
-						2, 0.35, 0.1, 0.35, 0.02);
+				Particles.burst(level, ParticleTypes.CLOUD, player.getX(), player.getY() + 0.2, player.getZ(),
+						2, 0.35, 0.1, 0.35);
 			}
 		}
 	}

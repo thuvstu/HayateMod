@@ -7,36 +7,42 @@ import java.util.Map;
 import java.util.UUID;
 
 import net.minecraft.ChatFormatting;
+import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerBossEvent;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.Mth;
+import net.minecraft.util.Prediction;
+import net.minecraft.util.RandomSource;
+import net.minecraft.world.BossEvent;
 import net.minecraft.world.InteractionResult;
+import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.RemovalReason;
-import net.minecraft.world.entity.Spider;
-import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.entity.monster.spider.Spider;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.portal.TeleportTransition;
 import net.minecraft.world.phys.Vec3;
-import net.minecraft.world.level.scoreboard.Criteria;
-import net.minecraft.world.level.scoreboard.DisplaySlot;
-import net.minecraft.world.level.scoreboard.Objective;
-import net.minecraft.world.level.scoreboard.Score;
-import net.minecraft.world.level.scoreboard.Scoreboard;
-import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.world.scores.DisplaySlot;
+import net.minecraft.world.scores.Objective;
+import net.minecraft.world.scores.ScoreAccess;
+import net.minecraft.world.scores.ScoreHolder;
+import net.minecraft.world.scores.Scoreboard;
+import net.minecraft.world.scores.criteria.ObjectiveCriteria;
 
 import net.fabricmc.api.ModInitializer;
-import net.fabricmc.fabric.api.entity.v3.LivingEntityEvents;
-import net.fabricmc.fabric.api.lifecycle.v1.ServerTickEvents;
+import net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents;
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 
@@ -44,6 +50,7 @@ import com.thuvstu.hayatemod.HayateMod;
 import com.thuvstu.hayatemod.entity.GaleSpiritEntity;
 import com.thuvstu.hayatemod.entity.ModEntities;
 import com.thuvstu.hayatemod.item.ModItems;
+import com.thuvstu.hayatemod.util.Particles;
 
 /**
  * The "en'en azemichi" - a recreation of the endless rice-paddy alley from
@@ -97,12 +104,12 @@ public final class EnenAzemichi implements ModInitializer {
 		// main entrypoint runs on the physical client too, so one registration
 		// covers both; in singleplayer the integrated server shares the static
 		// registry, and on a dedicated server this line simply runs server side.
-		PayloadTypeRegistry.playC2S().register(EnenChoiceC2SPayload.TYPE, EnenChoiceC2SPayload.CODEC);
+		PayloadTypeRegistry.serverboundPlay().register(EnenChoiceC2SPayload.TYPE, EnenChoiceC2SPayload.CODEC);
 		ServerPlayNetworking.registerGlobalReceiver(EnenChoiceC2SPayload.TYPE, (payload, context) ->
 				INSTANCE.onChoiceKeyPressed(context.player(), payload.choice()));
 
 		ServerTickEvents.END_SERVER_TICK.register(INSTANCE::onServerTick);
-		LivingEntityEvents.ENTITY_LIVING_DEATH.register(INSTANCE::onLivingDeath);
+		ServerLivingEntityEvents.AFTER_DEATH.register(INSTANCE::onLivingDeath);
 	}
 
 	// ------------------------------------------------------------ run control
@@ -127,14 +134,15 @@ public final class EnenAzemichi implements ModInitializer {
 			return false;
 		}
 
-		long today = level.getDayCount();
-		if (!force && lastDayOf(player) == today) {
+		MinecraftServer server = level.getServer();
+		long today = dayOf(level);
+		if (!force && lastDayOf(server, player) == today) {
 			player.sendSystemMessage(msg("commands.hayatemod.enen.daily"));
 			return false;
 		}
 
-		int clears = clearsOf(player);
-		boolean bossRun = clears >= BOSS_AFTER_CLEARS && !bossDefeatedOf(player);
+		int clears = clearsOf(server, player);
+		boolean bossRun = clears >= BOSS_AFTER_CLEARS && !bossDefeatedOf(server, player);
 
 		// The corridor is laid out on the player's feet; the surface is the top
 		// block the player stands on, the centre line an even x.
@@ -143,7 +151,7 @@ public final class EnenAzemichi implements ModInitializer {
 		int startZ = Mth.floor(player.getZ()) + 4;
 		int capZ = startZ + MAX_METERS / METERS_PER_BLOCK;
 
-		int goalMeters = Mth.clamp(baseGoal(clears) + level.random.nextInt(501), MIN_GOAL_METERS, MAX_METERS);
+		int goalMeters = Mth.clamp(baseGoal(clears) + level.getRandom().nextInt(501), MIN_GOAL_METERS, MAX_METERS);
 		int goalZ = startZ + goalMeters / METERS_PER_BLOCK;
 
 		// Where the run started, so the exit can return the player to it.
@@ -155,7 +163,7 @@ public final class EnenAzemichi implements ModInitializer {
 		HayateMod.LOGGER.info("EnenAzemichi: laying out a {} m alley at ({}, {}, {}), goal at z={}",
 				goalMeters, centerX, surfaceY, startZ, goalZ);
 
-		AzemichiTerrain.buildCorridor(level, centerX, surfaceY, startZ, capZ, level.random);
+		AzemichiTerrain.buildCorridor(level, centerX, surfaceY, startZ, capZ, level.getRandom());
 		AzemichiTerrain.buildPlaza(level, centerX, surfaceY, capZ);
 		AzemichiTerrain.buildTorii(level, centerX, surfaceY, goalZ);
 
@@ -175,11 +183,11 @@ public final class EnenAzemichi implements ModInitializer {
 				new Vec3(centerX + 0.5, surfaceY + 1, startZ - 3),
 				Vec3.ZERO, 0.0F, 0.0F, TeleportTransition.DO_NOTHING));
 
-		setLastDay(player, today);
+		setLastDay(server, player, today);
 		setupHud(level, session);
 		announceIntro(player, session);
 		level.playSound(null, player.getX(), player.getY(), player.getZ(),
-				SoundEvents.ENTITY_FIREWORK_ROCKET_LAUNCH, SoundSource.PLAYERS, 0.7F, 1.4F);
+				SoundEvents.FIREWORK_ROCKET_LAUNCH, SoundSource.PLAYERS, 0.7F, 1.4F);
 		return true;
 	}
 
@@ -203,7 +211,7 @@ public final class EnenAzemichi implements ModInitializer {
 		player.sendSystemMessage(msg(viaScarecrow
 				? "enen.hayatemod.exit.scarecrow" : "commands.hayatemod.enen.exit"));
 		level.playSound(null, player.getX(), player.getY(), player.getZ(),
-				SoundEvents.ENTITY_ENDERMAN_TELEPORT, SoundSource.PLAYERS, 1.0F, 1.0F);
+				SoundEvents.ENDERMAN_TELEPORT, SoundSource.PLAYERS, 1.0F, 1.0F);
 
 		cleanupRun(level, session);
 		refreshHud(level.getServer());
@@ -211,14 +219,15 @@ public final class EnenAzemichi implements ModInitializer {
 
 	/** The numbers of the current run, or the career stats when not running. */
 	public void reportStatus(ServerPlayer player) {
+		MinecraftServer server = ((ServerLevel) player.level()).getServer();
 		EnenSession session = this.sessionOf(player);
 		if (session == null) {
-			player.sendSystemMessage(msg("commands.hayatemod.enen.status.none", clearsOf(player)));
+			player.sendSystemMessage(msg("commands.hayatemod.enen.status.none", clearsOf(server, player)));
 			return;
 		}
 		player.sendSystemMessage(msg("commands.hayatemod.enen.status",
 				session.farthestMeters(), session.goalMeters(),
-				session.battleWins(), session.eventsUsed(), clearsOf(player)));
+				session.battleWins(), session.eventsUsed(), clearsOf(server, player)));
 	}
 
 	/** The player disconnected mid-run: quietly tear the run down. */
@@ -272,6 +281,15 @@ public final class EnenAzemichi implements ModInitializer {
 				announceMilestones(player, session);
 			}
 
+			// Bishatatsu's boss bar follows its health while it still guards the torii.
+			if (session.isBossRun()) {
+				ServerBossEvent bar = session.bossBar();
+				if (bar != null && level.getEntity(session.bossUuid()) instanceof LivingEntity boss
+						&& !boss.isDeadOrDying()) {
+					bar.setProgress(1.0F - boss.getHealth() / boss.getMaxHealth());
+				}
+			}
+
 			if (session.isGoalReached(player)) {
 				onGoalReached(level, session, player);
 				continue;
@@ -293,7 +311,7 @@ public final class EnenAzemichi implements ModInitializer {
 				player.sendSystemMessage(Component.translatable("enen.hayatemod.boss.blocked")
 						.withStyle(ChatFormatting.DARK_RED));
 				level.playSound(null, player.getX(), player.getY(), player.getZ(),
-						SoundEvents.ENTITY_ELDER_GUARDIAN_CURSE, SoundSource.HOSTILE, 1.0F, 0.7F);
+							SoundEvents.ELDER_GUARDIAN_CURSE, SoundSource.HOSTILE, 1.0F, 0.7F);
 			}
 			return;
 		}
@@ -311,8 +329,9 @@ public final class EnenAzemichi implements ModInitializer {
 		this.sessions.remove(player.getUUID());
 		this.pendingChoices.remove(player.getUUID());
 
-		int clears = clearsOf(player) + 1;
-		setClears(player, clears);
+		MinecraftServer server = level.getServer();
+		int clears = clearsOf(server, player) + 1;
+		setClears(server, player, clears);
 
 		give(player, new ItemStack(ModItems.GALE_ORB));
 		give(player, new ItemStack(ModItems.STORM_FRUIT, 3));
@@ -320,7 +339,7 @@ public final class EnenAzemichi implements ModInitializer {
 		if (session.isBossRun()) {
 			give(player, new ItemStack(ModItems.GALE_ORB, 2));
 			give(player, new ItemStack(ModItems.GREATER_GALE_CHARM));
-			setBossDefeated(player, true);
+			setBossDefeated(server, player, true);
 		}
 
 		player.sendSystemMessage(Component.translatable("enen.hayatemod.clear.title")
@@ -330,13 +349,13 @@ public final class EnenAzemichi implements ModInitializer {
 				.withStyle(ChatFormatting.YELLOW));
 
 		level.playSound(null, player.getX(), player.getY(), player.getZ(),
-				SoundEvents.ENTITY_PLAYER_LEVELUP, SoundSource.PLAYERS, 1.0F, 1.2F);
-		level.sendParticles(ParticleTypes.HAPPY_VILLAGER, player.getX(), player.getY() + 1, player.getZ(),
-				24, 0.6, 0.4, 0.6, 0.3);
-		level.sendParticles(ParticleTypes.END_ROD, player.getX(), player.getY() + 1.5, player.getZ(),
-				30, 0.8, 0.5, 0.8, 0.2);
-		level.sendParticles(ParticleTypes.CLOUD, player.getX(), player.getY() + 0.5, player.getZ(),
-				20, 1.0, 0.5, 1.0, 0.02);
+				SoundEvents.PLAYER_LEVELUP, SoundSource.PLAYERS, 1.0F, 1.2F);
+		Particles.burst(level, ParticleTypes.HAPPY_VILLAGER, player.getX(), player.getY() + 1, player.getZ(),
+				24, 0.5, 0.4, 0.5);
+		Particles.burst(level, ParticleTypes.END_ROD, player.getX(), player.getY() + 1.5, player.getZ(),
+				30, 0.5, 0.3, 0.5);
+		Particles.burst(level, ParticleTypes.CLOUD, player.getX(), player.getY() + 0.5, player.getZ(),
+				20, 0.7, 0.2, 0.7);
 
 		// Beyond the torii, facing back at it (yaw 180 = -Z).
 		player.teleport(new TeleportTransition(level,
@@ -349,10 +368,14 @@ public final class EnenAzemichi implements ModInitializer {
 
 	/** Removes every entity the run created (yokai, boss, encounter markers). */
 	private void cleanupRun(ServerLevel level, EnenSession session) {
+		ServerBossEvent bar = session.bossBar();
+		if (bar != null) {
+			bar.setVisible(false);
+		}
 		for (UUID uuid : session.trackedEntityUuids()) {
 			Entity entity = level.getEntity(uuid);
 			if (entity != null) {
-				entity.remove(RemovalReason.DISCARDED);
+				entity.remove(Entity.RemovalReason.DISCARDED);
 			}
 		}
 	}
@@ -365,13 +388,14 @@ public final class EnenAzemichi implements ModInitializer {
 	 * along the first 80 % of the alley.
 	 */
 	private void spawnEvents(ServerLevel level, EnenSession session) {
+		RandomSource random = level.getRandom();
 		int count = Mth.clamp(3 + session.goalMeters() / 2000, 3, 8);
 		List<EnenEventType> pool = new ArrayList<>(List.of(
 				EnenEventType.VENDING, EnenEventType.PHONE, EnenEventType.OLD_LADY,
 				EnenEventType.TRAIN, EnenEventType.MONSTER));
 		List<EnenEventType> picks = new ArrayList<>();
 		for (int i = 0; i < count - 1 && !pool.isEmpty(); i++) {
-			EnenEventType type = pool.get(level.random.nextInt(pool.size()));
+			EnenEventType type = pool.get(random.nextInt(pool.size()));
 			pool.remove(type);
 			if (picks.contains(type)) {
 				pool.add(type); // the second copy of a character is allowed
@@ -382,10 +406,10 @@ public final class EnenAzemichi implements ModInitializer {
 
 		int cursor = session.startZ() + Mth.floor((session.goalZ() - session.startZ()) * 0.08);
 		for (EnenEventType type : picks) {
-			int z = Mth.clamp(cursor + level.random.nextInt(120), session.startZ() + 10,
+			int z = Mth.clamp(cursor + random.nextInt(120), session.startZ() + 10,
 					session.goalZ() - 40);
 			cursor = z + METERS_TO_BLOCKS(150);
-			int x = session.centerX() + (level.random.nextBoolean() ? 5 : -5);
+			int x = session.centerX() + (random.nextBoolean() ? 5 : -5);
 			Vec3 position = new Vec3(x + 0.5, session.surfaceY() + 1, z + 0.5);
 			EnenEventEntity entity = EnenEventEntity.create(level, session.playerId(), type, position);
 			session.trackEvent(entity.getUUID());
@@ -398,12 +422,13 @@ public final class EnenAzemichi implements ModInitializer {
 
 	/** The yokai of the path: gale spirits, the further you go the stronger they are. */
 	private void spawnYokai(ServerLevel level, EnenSession session) {
+		RandomSource random = level.getRandom();
 		int count = Mth.clamp(2 + session.goalMeters() / 1500, 3, 9);
 		for (int i = 0; i < count; i++) {
-			double fraction = 0.05 + 0.85 * (i + level.random.nextDouble() * 0.8) / count;
+			double fraction = 0.05 + 0.85 * (i + random.nextDouble() * 0.8) / count;
 			int z = session.startZ() + Mth.floor(fraction * (session.capZ() - session.startZ()));
-			int x = session.centerX() + (level.random.nextBoolean() ? 1 : -1)
-					* (2 + level.random.nextInt(7));
+			int x = session.centerX() + (random.nextBoolean() ? 1 : -1)
+					* (2 + random.nextInt(7));
 			spawnYokai(level, session, x, session.surfaceY() + 1.5, z,
 					fraction < 0.35 ? 0 : fraction < 0.7 ? 1 : 2);
 		}
@@ -448,10 +473,17 @@ public final class EnenAzemichi implements ModInitializer {
 		session.trackMob(boss.getUUID(), EnenSession.YokaiKind.BISHATATSU);
 		session.setBossUuid(boss.getUUID());
 		level.playSound(null, boss.getX(), boss.getY(), boss.getZ(),
-				SoundEvents.BLOCK_BEACON_ACTIVATE, SoundSource.NEUTRAL, 1.0F, 0.6F);
+				SoundEvents.BEACON_ACTIVATE, SoundSource.NEUTRAL, 1.0F, 0.6F);
+
+		// The boss bar: it syncs itself to its players, the tick loop feeds it health.
+		ServerBossEvent bar = new ServerBossEvent(boss.getUUID(),
+				Component.translatable("enen.hayatemod.yokai.bishatatsu"),
+				BossEvent.BossBarColor.PINK, BossEvent.BossBarOverlay.NOTCHED_10);
+		session.setBossBar(bar);
 
 		ServerPlayer owner = level.getServer().getPlayerList().getPlayer(session.playerId());
 		if (owner != null) {
+			bar.addPlayer(owner);
 			owner.sendSystemMessage(Component.translatable("enen.hayatemod.boss.spawn")
 					.withStyle(ChatFormatting.DARK_RED));
 		}
@@ -499,7 +531,7 @@ public final class EnenAzemichi implements ModInitializer {
 		ServerLevel level = (ServerLevel) player.level();
 		event.tickProgress();
 		if (event.progress() < 4) {
-			int bread = 1 + level.random.nextInt(3);
+			int bread = 1 + level.getRandom().nextInt(3);
 			give(player, new ItemStack(Items.BREAD, bread));
 			player.sendSystemMessage(msg("enen.hayatemod.event.old_lady.feed",
 					event.progress(), bread));
@@ -513,7 +545,7 @@ public final class EnenAzemichi implements ModInitializer {
 	}
 
 	private void spawnJorogumo(ServerLevel level, EnenSession session, ServerPlayer player) {
-		Spider spider = new Spider(EntityType.Spider, level);
+		Spider spider = new Spider(EntityTypes.SPIDER, level);
 		spider.setPos(player.getX() + 1.5, player.getY(), player.getZ() + 1.5);
 		spider.getAttribute(Attributes.MAX_HEALTH).setBaseValue(30.0);
 		spider.getAttribute(Attributes.ATTACK_DAMAGE).setBaseValue(7.0);
@@ -522,7 +554,7 @@ public final class EnenAzemichi implements ModInitializer {
 		level.addFreshEntity(spider);
 		session.trackMob(spider.getUUID(), EnenSession.YokaiKind.JOROGUMO);
 		level.playSound(null, spider.getX(), spider.getY(), spider.getZ(),
-				SoundEvents.ENTITY_SPIDER_AMBIENT, SoundSource.HOSTILE, 1.0F, 0.8F);
+				SoundEvents.SPIDER_AMBIENT, SoundSource.HOSTILE, 1.0F, 0.8F);
 	}
 
 	private InteractionResult askChoice(ServerPlayer player, EnenEventEntity event, EnenSession session) {
@@ -559,7 +591,7 @@ public final class EnenAzemichi implements ModInitializer {
 		this.pendingChoices.remove(player.getUUID());
 
 		ServerLevel level = (ServerLevel) player.level();
-		int roll = level.random.nextInt(100);
+		int roll = level.getRandom().nextInt(100);
 		boolean applied = switch (event.type()) {
 			case VENDING -> applyVending(level, player, session, choice, roll);
 			case PHONE -> applyPhone(level, player, session, choice, roll);
@@ -573,14 +605,14 @@ public final class EnenAzemichi implements ModInitializer {
 		event.markUsed();
 		session.registerEventUsed();
 		level.playSound(null, player.getX(), player.getY(), player.getZ(),
-				SoundEvents.UI_BUTTON_CLICK, SoundSource.PLAYERS, 0.8F, 1.6F);
+				SoundEvents.UI_BUTTON_CLICK.value(), SoundSource.PLAYERS, 0.8F, 1.6F);
 	}
 
 	private boolean applyVending(ServerLevel level, ServerPlayer player, EnenSession session, int choice,
 			int roll) {
 		int[] costs = {1, 10, 100};
 		int cost = costs[choice];
-		if (player.getInventory().countItem(Items.EMERALD) < cost) {
+		if (countOf(player, Items.EMERALD) < cost) {
 			player.sendSystemMessage(msg("enen.hayatemod.event.vending.broke"));
 			return false;
 		}
@@ -659,8 +691,8 @@ public final class EnenAzemichi implements ModInitializer {
 					Vec3.ZERO, 0.0F, 0.0F, TeleportTransition.DO_NOTHING));
 			session.adjustGoal(800);
 			player.sendSystemMessage(msg("enen.hayatemod.event.train.boarded"));
-			level.sendParticles(ParticleTypes.CLOUD, player.getX(), player.getY() + 0.5, player.getZ(),
-					30, 0.8, 0.4, 0.8, 0.05);
+			Particles.burst(level, ParticleTypes.CLOUD, player.getX(), player.getY() + 0.5, player.getZ(),
+					30, 0.6, 0.2, 0.6);
 		} else {
 			player.sendSystemMessage(msg("enen.hayatemod.event.train.passed"));
 		}
@@ -691,27 +723,28 @@ public final class EnenAzemichi implements ModInitializer {
 
 	/** A surprise battle: a rank-scaled yokai right next to the player. */
 	private void spawnYokaiNear(ServerLevel level, EnenSession session, ServerPlayer player, int rank) {
-		int x = Mth.floor(player.getX()) + (level.random.nextInt(5) - 2);
-		int z = Mth.floor(player.getZ()) + 1 + level.random.nextInt(3);
+		int x = Mth.floor(player.getX()) + (level.getRandom().nextInt(5) - 2);
+		int z = Mth.floor(player.getZ()) + 1 + level.getRandom().nextInt(3);
 		spawnYokai(level, session, x, player.getY() + 0.5, z, rank);
 	}
 
 	/** A few free gifts lying on the path, like the items you find along the way. */
 	private void spawnLoot(ServerLevel level, EnenSession session) {
-		int count = 3 + level.random.nextInt(3);
+		RandomSource random = level.getRandom();
+		int count = 3 + random.nextInt(3);
 		int span = Math.max(1, session.goalZ() - session.startZ() - 40);
 		for (int i = 0; i < count; i++) {
-			int z = session.startZ() + 20 + level.random.nextInt(span);
-			int x = session.centerX() + level.random.nextInt(3) - 1;
-			ItemStack stack = switch (level.random.nextInt(5)) {
+			int z = session.startZ() + 20 + random.nextInt(span);
+			int x = session.centerX() + random.nextInt(3) - 1;
+			ItemStack stack = switch (random.nextInt(5)) {
 				case 0 -> new ItemStack(Items.APPLE);
-				case 1 -> new ItemStack(Items.BREAD, 1 + level.random.nextInt(2));
+				case 1 -> new ItemStack(Items.BREAD, 1 + random.nextInt(2));
 				case 2 -> new ItemStack(ModItems.GALE_DUST);
 				case 3 -> new ItemStack(Items.SUGAR);
 				default -> new ItemStack(ModItems.GALE_FEATHER);
 			};
 			ItemEntity item = new ItemEntity(level, x + 0.5, session.surfaceY() + 1.2, z + 0.5, stack);
-			item.setPickupDelay(20);
+			item.setDefaultPickUpDelay();
 			level.addFreshEntity(item);
 			session.trackEvent(item.getUUID());
 		}
@@ -720,7 +753,7 @@ public final class EnenAzemichi implements ModInitializer {
 	// ------------------------------------------------------------------ death
 
 	/** The death hook: yokai of active runs drop their rewards on the killer. */
-	private void onLivingDeath(LivingEntity entity) {
+	private void onLivingDeath(LivingEntity entity, DamageSource source) {
 		if (!(entity instanceof Spider || entity instanceof GaleSpiritEntity)) {
 			return;
 		}
@@ -737,7 +770,7 @@ public final class EnenAzemichi implements ModInitializer {
 			if (owner == null) {
 				continue;
 			}
-			if (entity.killer != owner) {
+			if (entity.getKillCredit() != owner) {
 				continue; // someone else got the kill: no reward for the runner
 			}
 
@@ -755,24 +788,24 @@ public final class EnenAzemichi implements ModInitializer {
 					give(owner, new ItemStack(ModItems.GALE_ORB));
 					owner.sendSystemMessage(msg("enen.hayatemod.battle.jorogumo"));
 					level.playSound(null, owner.getX(), owner.getY(), owner.getZ(),
-							SoundEvents.ENTITY_PLAYER_LEVELUP, SoundSource.PLAYERS, 1.0F, 1.2F);
+							SoundEvents.PLAYER_LEVELUP, SoundSource.PLAYERS, 1.0F, 1.2F);
 				}
 				case BISHATATSU -> {
 					// The kill itself is the gate: the clearing (which happens as
 					// soon as the player is past the goal) pays the real reward.
-					setBossDefeated(owner, true);
+					setBossDefeated(level.getServer(), owner, true);
 					owner.sendSystemMessage(msg("enen.hayatemod.battle.bishatatsu"));
-					level.sendParticles(ParticleTypes.HAPPY_VILLAGER, entity.getX(), entity.getY(),
-							entity.getZ(), 40, 1.0, 0.6, 1.0, 0.3);
+					Particles.burst(level, ParticleTypes.HAPPY_VILLAGER, entity.getX(), entity.getY(),
+							entity.getZ(), 40, 0.7, 0.4, 0.7);
 					level.playSound(null, owner.getX(), owner.getY(), owner.getZ(),
-							SoundEvents.ENTITY_PLAYER_LEVELUP, SoundSource.PLAYERS, 1.0F, 1.4F);
+							SoundEvents.PLAYER_LEVELUP, SoundSource.PLAYERS, 1.0F, 1.4F);
 				}
 			}
 		}
 	}
 
 	private void giveSpiritReward(ServerLevel level, ServerPlayer player, EnenSession.YokaiKind kind) {
-		int roll = level.random.nextInt(100);
+		int roll = level.getRandom().nextInt(100);
 		switch (kind) {
 			case SPIRIT_0 -> give(player, new ItemStack(ModItems.GALE_DUST, 2));
 			case SPIRIT_1 -> {
@@ -796,30 +829,34 @@ public final class EnenAzemichi implements ModInitializer {
 	// -------------------------------------------------------------------- hud
 
 	private void setupHud(ServerLevel level, EnenSession session) {
-		Scoreboard board = level.getServer().getScoreboard();
-		Objective objective = board.getObjectiveFromName(OBJECTIVE);
+		Scoreboard board = level.getScoreboard();
+		Objective objective = board.getObjective(OBJECTIVE);
 		if (objective == null) {
-			objective = board.addScore(OBJECTIVE, Criteria.DUMMY,
-					Component.translatable("enen.hayatemod.hud"));
-			board.setObjectiveSlot(objective, DisplaySlot.SIDEBAR);
+			objective = board.addObjective(OBJECTIVE, ObjectiveCriteria.DUMMY,
+					Component.translatable("enen.hayatemod.hud"),
+					ObjectiveCriteria.RenderType.INTEGER, false, null);
+			board.setDisplayObjective(DisplaySlot.SIDEBAR, objective);
 		}
 		updateHud(level, session);
 	}
 
 	private void updateHud(ServerLevel level, EnenSession session) {
-		MinecraftServer server = level.getServer();
-		ServerPlayer player = server.getPlayerList().getPlayer(session.playerId());
-		if (player == null) {
+		Scoreboard board = level.getScoreboard();
+		Objective objective = board.getObjective(OBJECTIVE);
+		ServerPlayer player = level.getServer().getPlayerList().getPlayer(session.playerId());
+		if (player == null || objective == null) {
 			return;
 		}
-		Scoreboard board = server.getScoreboard();
-		board.getPlayersScore().getOrCreate(player.getScoreboardName()).setScore(session.farthestMeters());
+		ScoreAccess mine = board.getOrCreatePlayerScore(
+				ScoreHolder.forNameOnly(player.getScoreboardName()), objective);
+		mine.set(session.farthestMeters());
 
 		// The goal rides along as a fake score row, so it sits just above the player
 		// while they are still short of it.
-		Score goal = board.getPlayersScore().getOrCreate(goalName(player));
-		goal.setDisplayName(Component.translatable("enen.hayatemod.hud.goal", session.goalMeters()));
-		goal.setScore(session.goalMeters() + 1);
+		ScoreAccess goal = board.getOrCreatePlayerScore(
+				ScoreHolder.forNameOnly(goalName(player)), objective);
+		goal.set(session.goalMeters() + 1);
+		goal.display(Component.translatable("enen.hayatemod.hud.goal", session.goalMeters()));
 	}
 
 	private static String goalName(ServerPlayer player) {
@@ -832,7 +869,7 @@ public final class EnenAzemichi implements ModInitializer {
 			return;
 		}
 		Scoreboard board = server.getScoreboard();
-		Objective objective = board.getObjectiveFromName(OBJECTIVE);
+		Objective objective = board.getObjective(OBJECTIVE);
 		if (objective != null) {
 			board.removeObjective(objective);
 		}
@@ -869,7 +906,7 @@ public final class EnenAzemichi implements ModInitializer {
 	private static void milestone(ServerPlayer player, String key) {
 		player.sendSystemMessage(msg(key));
 		player.level().playSound(null, player.getX(), player.getY(), player.getZ(),
-				SoundEvents.UI_BUTTON_CLICK, SoundSource.PLAYERS, 0.5F, 1.6F);
+				SoundEvents.UI_BUTTON_CLICK.value(), SoundSource.PLAYERS, 0.5F, 1.6F);
 	}
 
 	/** The base goal of the (clears + 1)-st run: the game's classic numbers. */
@@ -880,40 +917,86 @@ public final class EnenAzemichi implements ModInitializer {
 
 	/** Hands an item out; a full inventory drops the remainder at the player's feet. */
 	private static void give(ServerPlayer player, ItemStack stack) {
-		ItemStack leftover = player.getInventory().add(stack);
-		if (!leftover.isEmpty()) {
-			player.drop(leftover, false);
+		// 26.x: add() reports success with a boolean and leaves the remainder
+		// count in the stack itself.
+		player.getInventory().add(stack);
+		if (!stack.isEmpty()) {
+			player.drop(stack, false, Prediction.SERVER_ONLY);
 		}
 	}
+
+	/** How many of an item the player is carrying (26.x has no countItem). */
+	private static int countOf(ServerPlayer player, Item item) {
+		int count = 0;
+		for (ItemStack stack : player.getInventory()) {
+			if (stack.getItem() == item.value()) {
+				count += stack.getCount();
+			}
+		}
+		return count;
+	}
+
+
 
 	private static Component msg(String key, Object... args) {
 		return Component.translatable(key, args).withStyle(ChatFormatting.GOLD);
 	}
 
+	/**
+	 * The in-game day. 26.x dropped {@code getDayCount()} (days are timeline
+	 * data now, {@code Timelines.OVERWORLD_DAY}), but the overworld day is a
+	 * constant 24000-tick period, so the day number is simply time / 24000.
+	 */
+	private static long dayOf(ServerLevel level) {
+		return level.getGameTime() / 24000L;
+	}
+
 	// ------------------------------------------------------------ persistence
+	//
+	// 26.x removed the mod-writable CompoundTag on the player (saving is codec
+	// based now), so the azemichi's per-player numbers live in the world's
+	// EnenSaveData instead.
 
-	private static long lastDayOf(ServerPlayer player) {
-		return player.getPersistentData().getLong("hayate_enen_last_day");
+	private static EnenSaveData dataOf(MinecraftServer server) {
+		return server.getDataStorage().computeIfAbsent(EnenSaveData.TYPE);
 	}
 
-	private static void setLastDay(ServerPlayer player, long day) {
-		player.getPersistentData().putLong("hayate_enen_last_day", day);
+	private static EnenSaveData.Stats statsOf(MinecraftServer server, ServerPlayer player) {
+		return dataOf(server).getData().players()
+				.getOrDefault(player.getUUID(), EnenSaveData.Stats.ZERO);
 	}
 
-	private static int clearsOf(ServerPlayer player) {
-		return player.getPersistentData().getInt("hayate_enen_cleares");
+	private static void writeStats(MinecraftServer server, ServerPlayer player, EnenSaveData.Stats stats) {
+		Map<UUID, EnenSaveData.Stats> next = new HashMap<>(dataOf(server).getData().players());
+		next.put(player.getUUID(), stats);
+		dataOf(server).setData(new EnenSaveData.Packed(next));
 	}
 
-	private static void setClears(ServerPlayer player, int clears) {
-		player.getPersistentData().putInt("hayate_enen_cleares", clears);
+	private static long lastDayOf(MinecraftServer server, ServerPlayer player) {
+		return statsOf(server, player).lastDay();
 	}
 
-	private static boolean bossDefeatedOf(ServerPlayer player) {
-		return player.getPersistentData().getBoolean("hayate_enen_boss_defeated");
+	private static void setLastDay(MinecraftServer server, ServerPlayer player, long day) {
+		EnenSaveData.Stats s = statsOf(server, player);
+		writeStats(server, player, new EnenSaveData.Stats(day, s.clears(), s.bossDefeated()));
 	}
 
-	private static void setBossDefeated(ServerPlayer player, boolean defeated) {
-		player.getPersistentData().putBoolean("hayate_enen_boss_defeated", defeated);
+	private static int clearsOf(MinecraftServer server, ServerPlayer player) {
+		return statsOf(server, player).clears();
+	}
+
+	private static void setClears(MinecraftServer server, ServerPlayer player, int clears) {
+		EnenSaveData.Stats s = statsOf(server, player);
+		writeStats(server, player, new EnenSaveData.Stats(s.lastDay(), clears, s.bossDefeated()));
+	}
+
+	private static boolean bossDefeatedOf(MinecraftServer server, ServerPlayer player) {
+		return statsOf(server, player).bossDefeated();
+	}
+
+	private static void setBossDefeated(MinecraftServer server, ServerPlayer player, boolean defeated) {
+		EnenSaveData.Stats s = statsOf(server, player);
+		writeStats(server, player, new EnenSaveData.Stats(s.lastDay(), s.clears(), defeated));
 	}
 
 	/** A question waiting for the player's key press. */

@@ -4,9 +4,8 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
-import net.minecraft.world.level.block.LeafBlock;
-import net.minecraft.world.level.block.WheatBlock;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 
 import com.thuvstu.hayatemod.block.GaleLampBlock;
 import com.thuvstu.hayatemod.block.ModBlocks;
@@ -64,7 +63,7 @@ public final class AzemichiTerrain {
 					top = Blocks.GRASS_PATH.defaultBlockState();
 				} else if (paddy) {
 					top = random.nextBoolean() ? water
-							: Blocks.WHEAT.defaultBlockState().setValue(WheatBlock.AGE, random.nextInt(8));
+							: Blocks.WHEAT.defaultBlockState().setValue(BlockStateProperties.AGE_7, random.nextInt(8));
 				} else if (depth == 5) {
 					top = Blocks.GRASS_BLOCK.defaultBlockState();
 				} else {
@@ -141,7 +140,7 @@ public final class AzemichiTerrain {
 		for (int y = 1; y <= trunk; y++) {
 			set(level, pos, x, surfaceY + y, z, Blocks.OAK_LOG.defaultBlockState());
 		}
-		BlockState leaves = Blocks.OAK_LEAVES.defaultBlockState().setValue(LeafBlock.DISTANCE, 2);
+		BlockState leaves = Blocks.OAK_LEAVES.defaultBlockState().setValue(BlockStateProperties.DISTANCE, 2);
 		for (int dx = -2; dx <= 2; dx++) {
 			for (int dz = -2; dz <= 2; dz++) {
 				if (dx == 0 && dz == 0) {
@@ -220,14 +219,15 @@ public final class AzemichiTerrain {
 	// ----------------------------------------------------------------- helpers
 
 	private static void set(Level level, BlockPos.MutableBlockPos pos, int x, int y, int z, BlockState state) {
-		level.setBlock(pos.set(x, y, z), state, 3);
+		// flags: UPDATE_NEIGHBORS | UPDATE_CLIENTS, no update limit
+		level.setBlock(pos.set(x, y, z), state, 3, 0);
 	}
 
 	private static void setIfNotAir(Level level, BlockPos.MutableBlockPos pos, int x, int y, int z,
 			BlockState air) {
 		pos.set(x, y, z);
 		if (!level.getBlockState(pos).isAir()) {
-			level.setBlock(pos, air, 3);
+			level.setBlock(pos, air, 3, 0);
 		}
 	}
 }

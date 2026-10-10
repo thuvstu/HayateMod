@@ -8,6 +8,7 @@ import java.util.Map;
 import java.util.UUID;
 
 import net.minecraft.resources.ResourceKey;
+import net.minecraft.server.level.ServerBossEvent;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.Mth;
 import net.minecraft.world.level.Level;
@@ -50,6 +51,7 @@ public final class EnenSession {
 	private int battleWins;
 	private int eventsUsed;
 	private UUID bossUuid;
+	private ServerBossEvent bossBar;
 
 	private final Map<UUID, YokaiKind> trackedMobs = new HashMap<>();
 	private final List<UUID> eventEntities = new ArrayList<>();
@@ -190,6 +192,15 @@ public final class EnenSession {
 
 	public void setBossUuid(UUID uuid) {
 		this.bossUuid = uuid;
+	}
+
+	/** The boss bar above the player's head (null for normal runs). */
+	public ServerBossEvent bossBar() {
+		return this.bossBar;
+	}
+
+	public void setBossBar(ServerBossEvent bar) {
+		this.bossBar = bar;
 	}
 
 	// ------------------------------------------------------------- tracking
