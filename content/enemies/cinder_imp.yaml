@@ -1,8 +1,0 @@
-id: solommo:cinder_imp
-name: 煤インプ
-level: 12
-rank: trash
-species: husk
-tags: [element:fire]
-skills: [solommo:cinder_bite, solommo:cinder_swipe]
-loot: solommo:cinder_imp_loot

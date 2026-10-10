@@ -1,0 +1,15 @@
+{
+ "structures": [
+  {
+   "structure": "hayatemod:gale_ruins",
+   "weight": 1
+  }
+ ],
+ "placement": {
+  "type": "minecraft:random_spread",
+  "salt": 74591220,
+  "separation": 5,
+  "spacing": 18,
+  "spread_type": "triangular"
+ }
+}

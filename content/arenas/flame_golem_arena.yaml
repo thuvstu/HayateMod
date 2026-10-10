@@ -1,9 +1,0 @@
-id: solommo:flame_golem_arena
-name: 灰燼の闘技場
-structure: solommo:flame_arena
-markers:
-  stack_point: [0, 0, 0]
-  safe_spots:
-    - [-8, 0, 6]
-    - [8, 0, 6]
-    - [0, 0, -9]

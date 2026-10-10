@@ -1,9 +1,0 @@
-skill_cores: [melee_thrust, heavy_slam]
-triggers: [on_hit]
-conditions: []
-actions: []
-statuses: []
-elements: [fire]
-signals: [STACK]
-tag_namespaces: [element]
-limits: {max_chain_depth: 3, max_projectiles: 8, max_radius: 12.0}

@@ -1,0 +1,10 @@
+{
+	"variants": {
+		"lit=false": {
+			"model": "hayatemod:block/gale_lamp_off"
+		},
+		"lit=true": {
+			"model": "hayatemod:block/gale_lamp_on"
+		}
+	}
+}

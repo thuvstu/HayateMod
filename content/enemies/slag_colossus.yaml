@@ -1,9 +1,0 @@
-id: solommo:slag_colossus
-name: スラグ・コロッサス
-level: 18
-rank: elite
-species: golem
-boss_body: iron_golem
-tags: [element:fire]
-skills: [solommo:slag_cleave, solommo:lava_spread, solommo:ember_toss, solommo:molten_slam]
-loot: solommo:colossus_loot

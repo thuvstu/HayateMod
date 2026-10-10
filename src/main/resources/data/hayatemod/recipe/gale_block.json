@@ -1,0 +1,18 @@
+{
+	"type": "minecraft:crafting_shaped",
+	"category": "building",
+	"pattern": [
+		"###",
+		"###",
+		"###"
+	],
+	"key": {
+		"#": {
+			"item": "hayatemod:gale_ingot"
+		}
+	},
+	"result": {
+		"id": "hayatemod:gale_block",
+		"count": 1
+	}
+}

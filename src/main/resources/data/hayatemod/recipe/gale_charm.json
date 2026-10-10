@@ -1,0 +1,21 @@
+{
+	"type": "minecraft:crafting_shaped",
+	"category": "misc",
+	"pattern": [
+		" D ",
+		"I I",
+		" I "
+	],
+	"key": {
+		"D": {
+			"item": "hayatemod:gale_dust"
+		},
+		"I": {
+			"item": "hayatemod:gale_ingot"
+		}
+	},
+	"result": {
+		"id": "hayatemod:gale_charm",
+		"count": 1
+	}
+}

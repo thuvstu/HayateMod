@@ -1,7 +1,0 @@
-id: solommo:chainlord
-name: 連鎖の王
-desc: "効果の連鎖上限＋1。"
-chain_bonus: 1
-damage_mult: 1.0
-cooldown_mult: 1.0
-melee_mult: 1.0

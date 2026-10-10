@@ -1,0 +1,42 @@
+{
+ "attributes": {
+  "minecraft:visual/fog_color": "#3C6472",
+  "minecraft:visual/sky_color": "#0E1A26",
+  "minecraft:gameplay/natural_mob_spawns": {
+   "argument": {
+    "spawn_costs": {},
+    "spawns_by_category": {
+     "monster": [
+      {
+       "type": "minecraft:enderman",
+       "count": 1,
+       "weight": 100
+      }
+     ],
+     "creature": []
+    }
+   },
+   "modifier": "overlay"
+  }
+ },
+ "carvers": [],
+ "downfall": 0.0,
+ "effects": {
+  "water_color": "#3f76e4"
+ },
+ "features": [
+  [],
+  [],
+  [],
+  [],
+  [],
+  [],
+  [],
+  [],
+  [],
+  [],
+  []
+ ],
+ "has_precipitation": false,
+ "temperature": 0.5
+}

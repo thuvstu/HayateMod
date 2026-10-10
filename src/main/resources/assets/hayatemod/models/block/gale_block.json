@@ -1,0 +1,91 @@
+{
+	"parent": "minecraft:block/block",
+	"textures": {
+		"panel": "hayatemod:block/gale_block",
+		"particle": "#panel"
+	},
+	"elements": [
+		{
+			"from": [
+				0,
+				0,
+				0
+			],
+			"to": [
+				16,
+				15,
+				16
+			],
+			"faces": {
+				"down": {
+					"texture": "#panel",
+					"cullface": "down"
+				},
+				"up": {
+					"texture": "#panel",
+					"cullface": "up"
+				},
+				"north": {
+					"texture": "#panel",
+					"cullface": "north"
+				},
+				"south": {
+					"texture": "#panel",
+					"cullface": "south"
+				},
+				"west": {
+					"texture": "#panel",
+					"cullface": "west"
+				},
+				"east": {
+					"texture": "#panel",
+					"cullface": "east"
+				}
+			}
+		},
+		{
+			"from": [
+				1,
+				15,
+				1
+			],
+			"to": [
+				15,
+				16,
+				15
+			],
+			"faces": {
+				"down": {
+					"texture": "#panel",
+					"cullface": "down"
+				},
+				"up": {
+					"texture": "#panel",
+					"cullface": "up",
+					"uv": [
+						0,
+						0,
+						16,
+						16
+					]
+				},
+				"north": {
+					"texture": "#panel",
+					"cullface": "north"
+				},
+				"south": {
+					"texture": "#panel",
+					"cullface": "south"
+				},
+				"west": {
+					"texture": "#panel",
+					"cullface": "west"
+				},
+				"east": {
+					"texture": "#panel",
+					"cullface": "east"
+				}
+			}
+		}
+	]
+}

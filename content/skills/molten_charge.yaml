@@ -1,9 +1,0 @@
-id: solommo:molten_charge
-name: 熔解突進
-core: dash
-mods:
-  element: fire
-  distance: 10
-  cooldown: 5
-telegraph: false
-lethal: false

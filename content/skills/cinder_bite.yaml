@@ -1,7 +1,0 @@
-id: solommo:cinder_bite
-name: 煤噛み
-core: melee_thrust
-mods:
-  element: fire
-  range: 2
-  width: 1.0

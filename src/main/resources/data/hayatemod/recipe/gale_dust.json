@@ -1,0 +1,16 @@
+{
+	"type": "minecraft:crafting_shapeless",
+	"category": "misc",
+	"ingredients": [
+		{
+			"item": "minecraft:feather"
+		},
+		{
+			"item": "minecraft:blaze_powder"
+		}
+	],
+	"result": {
+		"id": "hayatemod:gale_dust",
+		"count": 2
+	}
+}

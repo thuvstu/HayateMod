@@ -1,9 +1,0 @@
-id: solommo:cinder_husk_loot
-direct: []
-pity:
-  currency: pity_shard
-  per_kill: 0
-  exchange: null
-materials:
-  - { item: craft_material, count: [1, 2] }
-  - { item: solommo:cinder_iron, count: [1, 2] }

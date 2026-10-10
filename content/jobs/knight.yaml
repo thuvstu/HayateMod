@@ -1,6 +1,0 @@
-# MVP職：騎士（Tank / DPS）
-id: solommo:knight
-name: 騎士
-roles: [tank, dps]
-weapons: [spear, sword]
-description: "前線で敵視を集め、槍と剣で戦う基本職。MVPの唯一のジョブ。"
