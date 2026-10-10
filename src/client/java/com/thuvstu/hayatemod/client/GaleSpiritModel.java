@@ -52,11 +52,14 @@ public class GaleSpiritModel extends EntityModel<LivingEntityRenderState> {
 						.addBox(-3.5F, -3.5F, -3.5F, 7.0F, 7.0F, 7.0F),
 				PartPose.offset(0.0F, HEAD_Y, 0.0F));
 
-		CubeListBuilder ribbon = new CubeListBuilder()
+		CubeListBuilder leftRibbon = new CubeListBuilder()
 				.texOffs(0, 16)
 				.addBox(-1.0F, -5.0F, -2.0F, 2.0F, 10.0F, 4.0F);
-		root.addOrReplaceChild("left_ribbon", ribbon, PartPose.offset(-5.0F, BODY_Y, 0.0F));
-		root.addOrReplaceChild("right_ribbon", ribbon, PartPose.offset(5.0F, BODY_Y, 0.0F));
+		CubeListBuilder rightRibbon = new CubeListBuilder()
+				.texOffs(0, 16)
+				.addBox(-1.0F, -5.0F, -2.0F, 2.0F, 10.0F, 4.0F);
+		root.addOrReplaceChild("left_ribbon", leftRibbon, PartPose.offset(-5.0F, BODY_Y, 0.0F));
+		root.addOrReplaceChild("right_ribbon", rightRibbon, PartPose.offset(5.0F, BODY_Y, 0.0F));
 
 		return LayerDefinition.create(mesh, 64, 32);
 	}

@@ -13,6 +13,7 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.storage.loot.LootPool;
 import net.minecraft.world.level.storage.loot.LootTable;
 import net.minecraft.world.level.storage.loot.entries.LootItem;
+import net.minecraft.world.level.storage.loot.predicates.LootItemRandomChanceCondition;
 
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
@@ -40,6 +41,7 @@ public class HayateModEvents implements ModInitializer {
 			// Only modify built-in loot tables and leave data pack loot tables untouched.
 			if (source.isBuiltin() && COAL_ORE_LOOT_TABLE.equals(key)) {
 				LootPool.Builder poolBuilder = LootPool.lootPool()
+						.when(LootItemRandomChanceCondition.randomChance(0.15F))
 						.add(LootItem.lootTableItem(ModItems.GALE_DUST));
 
 				tableBuilder.withPool(poolBuilder);

@@ -36,7 +36,7 @@ def fail(message: str) -> None:
 
 def load_json(path: pathlib.Path):
 	try:
-		return json.loads(path.read_text())
+		return json.loads(path.read_text(encoding="utf-8"))
 	except Exception as exc:  # noqa: BLE001 - report and continue
 		fail(f"{path.relative_to(ROOT)}: invalid json ({exc})")
 		return None
@@ -58,9 +58,9 @@ def registered_ids() -> tuple[set[str], set[str]]:
 
 	for path in (item_file, block_file):
 		if path.exists():
-			item_ids |= set(re.findall(r'\bcreate\("([a-z0-9_]+)"\)', path.read_text()))
+			item_ids |= set(re.findall(r'\bcreate\("([a-z0-9_]+)"\)', path.read_text(encoding="utf-8")))
 	if block_file.exists():
-		block_ids |= set(re.findall(r'\bcreate\("([a-z0-9_]+)"\)', block_file.read_text()))
+		block_ids |= set(re.findall(r'\bcreate\("([a-z0-9_]+)"\)', block_file.read_text(encoding="utf-8")))
 
 	# every block of this mod also has a BlockItem
 	return item_ids | block_ids, block_ids

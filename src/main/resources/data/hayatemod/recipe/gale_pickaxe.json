@@ -3,16 +3,12 @@
 	"category": "equipment",
 	"pattern": [
 		"III",
-		".S.",
-		".S."
+		" S ",
+		" S "
 	],
 	"key": {
-		"I": {
-			"item": "hayatemod:gale_ingot"
-		},
-		"S": {
-			"item": "minecraft:stick"
-		}
+		"I": "hayatemod:gale_ingot",
+		"S": "minecraft:stick"
 	},
 	"result": {
 		"id": "hayatemod:gale_pickaxe"

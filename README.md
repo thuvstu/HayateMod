@@ -64,6 +64,7 @@ IDE から開く場合は `build.gradle` を **Gradle プロジェクトとし�
 | クリエイティブタブ | `hayatemod:hayate` | 上記をまとめた独自タブ |
 | コマンド | `/hayate about` | バージョン表示 |
 | コマンド | `/hayate boost [対象] [秒数] [レベル]` | 移動速度上昇を付与（権限レベル2） |
+| コマンド | `/loctp <構造物\|#タグ>` | 最寄りを探してテレポート（権限レベル2・探索半径10000）。`hayatemod:gale_ruins` の動作確認用 |
 | イベント | `LootTableEvents.MODIFY` | 石炭鉱石のドロップに疾風の粉を追加 |
 | イベント | `ServerLifecycleEvents.SERVER_STARTED` | 起動時ログ（テンプレート） |
 | イベント | `ServerTickEvents.END_SERVER_TICK` | 疾風の具足のフルセット判定（移動速度 + 風のパーティクル） |
@@ -139,8 +140,8 @@ CI では「生成結果がコミット済みか」も見ているので、ス�
 `ArmorItem` クラスは存在しません。手順は以下の3つだけです。
 
 1. `ArmorMaterial` レコードを作る（耐久倍率・部位ごとの防御力・エンチャント適性・装備音・靭性・ノックバック耐性・修理タグ・`EquipmentAsset` のキー）
-2. `data/<ns>/equipment/<id>.json` に `{}` を置いて `EquipmentAsset` を登録する
-   （テクスチャは規約で `assets/<ns>/textures/entity/equipment/humanoid/<id>.png` と
+2. `assets/<ns>/equipment/<id>.json` にレイヤー定義を置いて `EquipmentAsset` を登録する
+   （クライアントリソース。`data/` 側ではない点に注意。テクスチャは規約で `assets/<ns>/textures/entity/equipment/humanoid/<id>.png` と
    `humanoid_leggings/<id>.png` から引かれる。どちらも 64x32）
 3. `new Item(new Item.Properties().humanoidArmor(material, ArmorType.HELMET))` で登録する
    （`equippable` コンポーネントと防御力の属性はここで付く）
@@ -173,7 +174,7 @@ CI では「生成結果がコミット済みか」も見ているので、ス�
 ```
 
 `features` は `GenerationStep.Decoration` と 1 対 1 なので**必ず 11 個**（空でも良い）。
-鉱石は index 6、地表のディスク類は index 10 に入れるのがバニラの慣習です。
+鉱石も地表のディスク類も index 6（`UNDERGROUND_ORES` の段。バニラの平原がそうなっている）に入れるのがバニラの慣習です。
 
 ネザーに配置するには Fabric API の `NetherBiomes` を使います。
 
@@ -308,19 +309,21 @@ data/hayatemod/structures/gale_ruins/ruin_1.nbt          … ピースの本体�
 バニラの書式（実 jar から確認したもの）:
 
 ```jsonc
-// structure
+// structure（use_expansion_hack は 26.3 の必須キー。小規模遺跡は false）
 { "type": "minecraft:jigsaw", "start_pool": "hayatemod:gale_ruins/start",
   "size": 1, "max_distance_from_center": 40,
   "start_height": { "type": "minecraft:uniform",
                     "max_inclusive": { "below_top": 12 },
                     "min_inclusive": { "absolute": 32 } },
   "biomes": "#hayatemod:has_structure/gale_ruins",
-  "step": "underground_decoration", "terrain_adaptation": "beard_thin" }
+  "step": "underground_decoration", "terrain_adaptation": "beard_thin",
+  "use_expansion_hack": false }
 
-// template_pool（element_type は 26.3 でも legacy_ 付きが無難）
+// template_pool（element_type は 26.3 でも legacy_ 付きが無難。processors は必須）
 { "fallback": "minecraft:empty", "elements": [ { "weight": 1, "element": {
       "element_type": "minecraft:legacy_single_pool_element",
-      "location": "hayatemod:gale_ruins/ruin_1", "projection": "rigid" } } ] }
+      "location": "hayatemod:gale_ruins/ruin_1", "processors": "minecraft:empty",
+      "projection": "rigid" } } ] }
 
 // structure_set
 { "structures": [ { "structure": "hayatemod:gale_ruins", "weight": 1 } ],

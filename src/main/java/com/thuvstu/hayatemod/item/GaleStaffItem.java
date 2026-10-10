@@ -2,20 +2,17 @@ package com.thuvstu.hayatemod.item;
 
 import java.util.function.Consumer;
 
-import net.minecraft.ChatFormatting;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
-import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.item.component.TooltipDisplay;
-import net.minecraft.world.item.component.UseCooldown;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
@@ -25,7 +22,7 @@ import net.minecraft.world.phys.Vec3;
  *
  * <p>Demonstrates three things a mod item usually needs:
  * <ul>
- *     <li>a {@link UseCooldown} component (declared in {@link ModItems}), so the item
+ *     <li>a {@code UseCooldown} component (declared in {@link ModItems}), so the item
  *         greys out in the hotbar for a moment</li>
  *     <li>durability, spent with {@link ItemStack#hurtAndBreak}</li>
  *     <li>server side movement plus a client visible sound/particles</li>
@@ -64,11 +61,7 @@ public class GaleStaffItem extends Item {
 		}
 
 		// Cooldown declared on the item, and one durability point per dash.
-		UseCooldown cooldown = stack.get(net.minecraft.core.component.DataComponents.USE_COOLDOWN);
-		if (cooldown != null) {
-			cooldown.apply(stack, (LivingEntity) user);
-		}
-		stack.hurtAndBreak(1, user, user.getEquipmentSlotForItem(stack));
+		ItemUsage.applyCooldownAndDamage(stack, user);
 
 		return InteractionResult.CONSUME;
 	}
@@ -76,6 +69,6 @@ public class GaleStaffItem extends Item {
 	@Override
 	public void appendHoverText(ItemStack stack, TooltipContext context, TooltipDisplay display,
 			Consumer<Component> tooltip, TooltipFlag flag) {
-		tooltip.accept(Component.translatable("itemTooltip.hayatemod.gale_staff").withStyle(ChatFormatting.AQUA));
+		ItemUsage.addTooltip(tooltip, "itemTooltip.hayatemod.gale_staff");
 	}
 }

@@ -59,14 +59,12 @@
 		[],
 		[],
 		[
-			"hayatemod:gale_ore"
+			"hayatemod:gale_ore",
+			"hayatemod:gale_ash_disk"
 		],
 		[],
 		[],
-		[],
-		[
-			"hayatemod:gale_ash_disk"
-		]
+		[]
 	],
 	"has_precipitation": false,
 	"temperature": 2.0

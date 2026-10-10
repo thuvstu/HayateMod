@@ -1,23 +1,17 @@
 {
- "type": "minecraft:crafting_shaped",
- "category": "equipment",
- "pattern": [
-  "F.F",
-  "FIF",
-  ".S."
- ],
- "key": {
-  "F": {
-   "item": "hayatemod:gale_feather"
-  },
-  "I": {
-   "item": "hayatemod:gale_ingot"
-  },
-  "S": {
-   "item": "minecraft:stick"
-  }
- },
- "result": {
-  "id": "hayatemod:gale_fan"
- }
+	"type": "minecraft:crafting_shaped",
+	"category": "equipment",
+	"pattern": [
+		"F F",
+		"FIF",
+		" S "
+	],
+	"key": {
+		"F": "hayatemod:gale_feather",
+		"I": "hayatemod:gale_ingot",
+		"S": "minecraft:stick"
+	},
+	"result": {
+		"id": "hayatemod:gale_fan"
+	}
 }

@@ -46,12 +46,15 @@ public class GaleLampBlock extends Block {
 		}
 
 		boolean lit = state.getValue(LIT);
+		if (level.isClientSide()) {
+			return InteractionResult.SUCCESS;
+		}
 		level.setBlockAndUpdate(pos, state.setValue(LIT, !lit));
 
 		// Play a click sound to emphasise the interaction.
-		level.playSound(player, pos, SoundEvents.COMPARATOR_CLICK, SoundSource.BLOCKS, 1.0F, lit ? 0.6F : 0.9F);
+		level.playSound(null, pos, SoundEvents.COMPARATOR_CLICK, SoundSource.BLOCKS, 1.0F, lit ? 0.6F : 0.9F);
 
-		return InteractionResult.SUCCESS;
+		return InteractionResult.SUCCESS_SERVER;
 	}
 
 	public static int getLuminance(BlockState state) {
