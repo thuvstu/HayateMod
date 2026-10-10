@@ -97,7 +97,8 @@ public final class EnenAzemichi implements ModInitializer {
 	private final Map<UUID, EnenSession> sessions = new HashMap<>();
 	private final Map<UUID, PendingChoice> pendingChoices = new HashMap<>();
 
-	private EnenAzemichi() {
+	// Public for the Fabric entrypoint loader; game logic uses INSTANCE.
+	public EnenAzemichi() {
 	}
 
 	@Override
