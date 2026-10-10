@@ -243,16 +243,33 @@ public class GaleSpiritEntity extends PathfinderMob {
 }
 ```
 
-3. 属性は **必ず** 登録してください（登録しないと AI が `null` を読んで落ちます）。
+3. **スポーン条件と属性は Fabric のビルダー経由で**登録します。ここが 26.3 の
+   一番の落とし穴で、`SpawnPlacements.register(...)` が **private になった**ため、
+   MOD からは `EntityType.Builder` を直接使うか、Fabric の
+   `FabricEntityType.Builder` を使うしかありません。
 
 ```java
-FabricDefaultAttributeRegistry.register(GALE_SPIRIT, GaleSpiritEntity.createAttributes());
-//   net.fabricmc.fabric.api.object.builder.v1.entity.FabricDefaultAttributeRegistry
+public static final EntityType<GaleSpiritEntity> GALE_SPIRIT = Registry.register(
+		BuiltInRegistries.ENTITY_TYPE,
+		GALE_SPIRIT_KEY,
+		FabricEntityType.Builder
+				.createMob(GaleSpiritEntity::new, MobCategory.CREATURE, mob -> mob
+						.spawnPlacement(SpawnPlacementTypes.NO_RESTRICTIONS,
+								Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
+								GaleSpiritEntity::checkSpiritSpawnRules)
+						.defaultAttributes(GaleSpiritEntity::createAttributes))
+				.sized(0.7F, 0.9F)
+				.eyeHeight(0.55F)
+				.clientTrackingRange(8)
+				.build(GALE_SPIRIT_KEY));
 ```
 
-エンティティ型は `EntityType.Builder.of(factory, MobCategory).sized(...).build(ResourceKey)` で
-作り、`Registry.register(BuiltInRegistries.ENTITY_TYPE, key, type)` で登録します。
-`build()` に渡すのは **文字列ではなく `ResourceKey<EntityType<?>>`** です。
+- `build()` に渡すのは **文字列ではなく `ResourceKey<EntityType<?>>`**
+- 属性（`defaultAttributes`）を忘れると AI が `null` を読んで落ちます
+- スポーン条件のラムダは `SpawnPredicate<T>` =
+  `test(EntityType<T>, ServerLevelAccessor, EntitySpawnReason, BlockPos, RandomSource)`。
+  **`EntityType<? extends T>` では不一致になる**ので注意
+  （`ServerLevelAccessor` は `world.level` 側。`server.level` ではありません）
 
 **描画は src/client 側**（`splitEnvironmentSourceSets()` で分かれています）。
 26.x のレンダラは **エンティティではなくレンダーステート**を引数に取ります。
