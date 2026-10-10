@@ -12,6 +12,10 @@ public class HayateModClient implements ClientModInitializer {
 		// This entrypoint is suitable for setting up client-specific logic, such as
 		// rendering, key bindings or screens.
 		EntityRendererRegistry.register(ModEntities.GALE_SPIRIT, GaleSpiritRenderer::new);
+		EntityRendererRegistry.register(ModEntities.AZEMICHI_EVENT, EnenEventRenderer::new);
+
+		// The azemichi choice keys (1/2/3 answer encounter questions).
+		EnenChoiceKeys.init();
 
 		HayateMod.LOGGER.info("HayateMod: client side ready");
 	}

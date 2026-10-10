@@ -19,6 +19,8 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
+import com.thuvstu.hayatemod.util.Particles;
+
 /**
  * A fan that shoves everything standing in front of the holder away.
  *
@@ -84,9 +86,9 @@ public class GaleFanItem extends Item {
 		level.playSound(null, user.getX(), user.getY(), user.getZ(), SoundEvents.WIND_CHARGE_BURST,
 				SoundSource.PLAYERS, 1.0F, 0.9F);
 		if (level instanceof ServerLevel serverLevel) {
-			serverLevel.sendParticles(ParticleTypes.CLOUD, origin.x + look.x * 2.0,
+			Particles.burst(serverLevel, ParticleTypes.CLOUD, origin.x + look.x * 2.0,
 					origin.y + look.y * 2.0, origin.z + look.z * 2.0,
-					6 + pushed * 4, 1.2, 0.8, 1.2, 0.06);
+					6 + pushed * 4, 1.2, 0.8, 1.2);
 		}
 
 		ItemUsage.applyCooldownAndDamage(stack, user);

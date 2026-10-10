@@ -5,6 +5,7 @@ import net.minecraft.world.level.ServerLevelAccessor;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
@@ -12,8 +13,10 @@ import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.control.FlyingMoveControl;
 import net.minecraft.world.entity.ai.goal.FloatGoal;
 import net.minecraft.world.entity.ai.goal.LookAtPlayerGoal;
+import net.minecraft.world.entity.ai.goal.MeleeAttackGoal;
 import net.minecraft.world.entity.ai.goal.RandomLookAroundGoal;
 import net.minecraft.world.entity.ai.goal.RandomStrollGoal;
+import net.minecraft.world.entity.ai.goal.target.NearestAttackableTargetGoal;
 import net.minecraft.world.entity.ai.navigation.FlyingPathNavigation;
 import net.minecraft.world.entity.ai.navigation.PathNavigation;
 import net.minecraft.world.entity.player.Player;
@@ -37,10 +40,21 @@ public class GaleSpiritEntity extends PathfinderMob {
 	/** How many degrees the spirits can turn per tick. */
 	private static final int TURN_SPEED = 20;
 
+	/** Battle form (the enen azemichi): the spirit chases and strikes. Drifters stay harmless. */
+	private boolean hostile;
+
 	public GaleSpiritEntity(EntityType<? extends GaleSpiritEntity> type, Level level) {
 		super(type, level);
 		this.setNoGravity(true);
 		this.moveControl = new FlyingMoveControl<GaleSpiritEntity>(this, TURN_SPEED, true);
+	}
+
+	public void setHostile(boolean hostile) {
+		this.hostile = hostile;
+	}
+
+	public boolean isHostile() {
+		return this.hostile;
 	}
 
 	/**
@@ -63,9 +77,19 @@ public class GaleSpiritEntity extends PathfinderMob {
 	@Override
 	protected void registerGoals() {
 		this.goalSelector.addGoal(0, new FloatGoal(this));
-		this.goalSelector.addGoal(1, new RandomStrollGoal(this, 1.0));
-		this.goalSelector.addGoal(2, new LookAtPlayerGoal(this, Player.class, 8.0F));
-		this.goalSelector.addGoal(3, new RandomLookAroundGoal(this));
+		// Inert unless the spirit was set hostile: the target goal below only
+		// picks a player for battle-form spirits, so drifters keep wandering.
+		this.goalSelector.addGoal(1, new MeleeAttackGoal(this, 1.2D, true));
+		this.goalSelector.addGoal(2, new NearestAttackableTargetGoal<>(this, Player.class, 10, true, false,
+				this::canAttack));
+		this.goalSelector.addGoal(3, new RandomStrollGoal(this, 1.0));
+		this.goalSelector.addGoal(4, new LookAtPlayerGoal(this, Player.class, 8.0F));
+		this.goalSelector.addGoal(5, new RandomLookAroundGoal(this));
+	}
+
+	/** Only battle-form spirits may choose a target. */
+	private boolean canAttack(LivingEntity living, net.minecraft.server.level.ServerLevel level) {
+		return this.hostile && living instanceof Player;
 	}
 
 	@Override
