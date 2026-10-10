@@ -770,6 +770,40 @@ def gale_ash() -> Canvas:
 	return c
 
 
+def azemichi_event() -> Canvas:
+    """The azemichi event marker: a wooden post with a paper signboard, 64x32 sheet.
+
+    Cube UV layout (the vanilla unroll, see EnenEventModel):
+      * post (2x16x2 at texOffs(0,0))  -> x=0..7,  y=0..17
+      * board (10x8x2 at texOffs(16,0)) -> x=16..51, y=0..9, with the 10x8 front
+        face at x=30..39, y=2..9 - that is where the sign's art goes
+    """
+    c = Canvas(64, 32)
+    # post: vertical wood grain
+    for y in range(18):
+        for x in range(8):
+            grain = (x * 3 + y * 2) % 6
+            c.set(x, y, LEATHER if grain else LEATHER_DARK)
+    c.vline(2, 2, 17, mix(LEATHER, SHINE, 0.15))
+    # board: wood frame over every face
+    c.rect(16, 0, 51, 9, LEATHER_DARK)
+    # side edges a bit lighter so the board reads as a box
+    c.rect(18, 2, 27, 9, LEATHER)
+    c.rect(42, 2, 51, 9, LEATHER)
+    # the back: plain paper with a border
+    c.rect(17, 3, 24, 8, rgb("D8CBA8"))
+    # the front: frame, paper, and the sign art
+    c.rect(30, 2, 39, 9, LEATHER)
+    c.rect(31, 3, 38, 8, rgb("F4ECD9"))
+    # a gale swirl in the middle of the sign
+    c.ring(34.5, 5.5, 2.0, 0.7, MID)
+    c.set(33, 4, DEEP)
+    c.set(35, 7, DEEP)
+    # a vermilion corner accent, like the torii
+    c.rect(37, 3, 38, 3, rgb("E05A4E"))
+    return c
+
+
 def gale_spirit() -> Canvas:
 	"""The gale spirit's skin: a 64x32 mob sheet of drifting wind bands.
 
@@ -877,6 +911,7 @@ def targets():
 			ore(DEEPSLATE, DEEPSLATE_LIGHT, DEEPSLATE_DARK, "7FE3F0", "17131A"),
 		ASSETS / "textures" / "block" / "gale_ash.png": gale_ash(),
 		ASSETS / "textures" / "entity" / "gale_spirit.png": gale_spirit(),
+		ASSETS / "textures" / "entity" / "azemichi_event.png": azemichi_event(),
 		ASSETS / "icon.png": icon(),
 	}
 

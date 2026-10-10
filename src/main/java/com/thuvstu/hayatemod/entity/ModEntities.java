@@ -1,12 +1,16 @@
 package com.thuvstu.hayatemod.entity;
 
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
+import net.minecraft.util.RandomSource;
+import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.MobCategory;
 import net.minecraft.world.entity.SpawnPlacementTypes;
+import net.minecraft.world.level.ServerLevelAccessor;
 import net.minecraft.world.level.levelgen.Heightmap;
 
 import net.fabricmc.fabric.api.biome.v1.BiomeModifications;
@@ -14,6 +18,7 @@ import net.fabricmc.fabric.api.biome.v1.BiomeSelectors;
 import net.fabricmc.fabric.api.object.builder.v1.entity.FabricEntityType;
 
 import com.thuvstu.hayatemod.HayateMod;
+import com.thuvstu.hayatemod.azemichi.EnenEventEntity;
 import com.thuvstu.hayatemod.worldgen.ModWorldgen;
 
 /**
@@ -50,6 +55,29 @@ public final class ModEntities {
 					.eyeHeight(0.55F)
 					.clientTrackingRange(8)
 					.build(GALE_SPIRIT_KEY));
+
+	/** Must match the id used by the azemichi generator and the client renderer. */
+	public static final ResourceKey<EntityType<?>> AZEMICHI_EVENT_KEY = ResourceKey.create(
+			Registries.ENTITY_TYPE, HayateMod.id("azemichi_event"));
+
+	/**
+	 * The encounter marker of the azemichi run (vending machine, phone booth,
+	 * ...). It never spawns naturally and never moves: the placement rule is a
+	 * constant {@code false}, and the entity re-anchors itself to its spawn point.
+	 */
+	public static final EntityType<EnenEventEntity> AZEMICHI_EVENT = Registry.register(
+			BuiltInRegistries.ENTITY_TYPE,
+			AZEMICHI_EVENT_KEY,
+			FabricEntityType.Builder
+					.createMob(EnenEventEntity::new, MobCategory.CREATURE, mob -> mob
+							.spawnPlacement(SpawnPlacementTypes.NO_RESTRICTIONS,
+									Heightmap.Types.MOTION_BLOCKING,
+									EnenEventEntity::neverSpawnsNaturally)
+							.defaultAttributes(EnenEventEntity::createAttributes))
+					.sized(0.5F, 1.4F)
+					.eyeHeight(1.0F)
+					.clientTrackingRange(8)
+					.build(AZEMICHI_EVENT_KEY));
 
 	public static void initialize() {
 		// ... and it only ever shows up in the mod's own two biomes.

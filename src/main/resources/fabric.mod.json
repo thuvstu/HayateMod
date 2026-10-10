@@ -17,7 +17,9 @@
 		"main": [
 			"com.thuvstu.hayatemod.HayateMod",
 			"com.thuvstu.hayatemod.command.HayateModCommands",
-			"com.thuvstu.hayatemod.event.HayateModEvents"
+			"com.thuvstu.hayatemod.event.HayateModEvents",
+			"com.thuvstu.hayatemod.azemichi.EnenAzemichi",
+			"com.thuvstu.hayatemod.azemichi.EnenCommand"
 		],
 		"client": [
 			"com.thuvstu.hayatemod.client.HayateModClient"
