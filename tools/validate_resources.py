@@ -232,6 +232,25 @@ def check_data_references(item_ids: set[str], block_ids: set[str]) -> None:
 		if not (DATA / "loot_table" / "blocks" / f"{block}.json").exists():
 			fail(f"block {block} has no loot table")
 
+	# chests and mobs: the drops must be items we actually add
+	for kind in ("chests", "entities"):
+		for path in sorted((DATA / "loot_table" / kind).glob("*.json")):
+			content = load_json(path)
+			if content is None:
+				continue
+			for pool in content.get("pools", []):
+				for entry in pool.get("entries", []):
+					check_id(entry.get("name"), f"loot_table/{kind}/{path.name}")
+
+	# ... and an entity loot table only makes sense for a registered entity id
+	registered = set()
+	for java_file in sorted(JAVA.rglob("*.java")):
+		registered.update(re.findall(r'HayateMod\.id\("([a-z0-9_]+)"\)',
+		                             java_file.read_text(errors="replace")))
+	for path in sorted((DATA / "loot_table" / "entities").glob("*.json")):
+		if path.stem not in registered:
+			fail(f"loot_table/entities/{path.name}: no entity registered under that id")
+
 	# recipes
 	for path in sorted((DATA / "recipe").glob("*.json")):
 		content = load_json(path)

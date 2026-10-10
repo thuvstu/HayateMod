@@ -1,5 +1,9 @@
 package com.thuvstu.hayatemod.entity;
 
+import net.minecraft.core.BlockPos;
+import net.minecraft.server.level.ServerLevelAccessor;
+import net.minecraft.util.RandomSource;
+import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.PathfinderMob;
@@ -37,6 +41,15 @@ public class GaleSpiritEntity extends PathfinderMob {
 		super(type, level);
 		this.setNoGravity(true);
 		this.moveControl = new FlyingMoveControl<GaleSpiritEntity>(this, TURN_SPEED, true);
+	}
+
+	/**
+	 * Spawn rule for {@code FabricEntityType.Builder}: a spirit only appears where there
+	 * is room for it, so it never ends up inside a block.
+	 */
+	public static boolean checkSpiritSpawnRules(EntityType<? extends GaleSpiritEntity> type,
+			ServerLevelAccessor level, EntitySpawnReason reason, BlockPos pos, RandomSource random) {
+		return level.getBlockState(pos).isAir() && level.getBlockState(pos.above()).isAir();
 	}
 
 	public static AttributeSupplier.Builder createAttributes() {

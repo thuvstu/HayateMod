@@ -218,22 +218,13 @@ jobs:
           echo "--- done ---"
           ls -la
 
-      - name: emit spawn placement and loot table details
+      - name: emit the spawn predicate signature
         run: |
           set +e
           cd ci-out
-          CP="client.jar"
           one () { tr '\n' '~' | tr -s ' ' | head -c "$1"; }
-          echo "::notice title=javap:SpawnPlacements-all::$(javap -p -cp $CP net.minecraft.world.entity.SpawnPlacements 2>&1 | one 1600)"
-          echo "::notice title=javap:SpawnPlacementTypes-all::$(javap -p -cp $CP net.minecraft.world.entity.SpawnPlacementTypes 2>&1 | one 1200)"
-          echo "::notice title=registries:spawn::$(javap -cp $CP net.minecraft.core.registries.Registries 2>&1 | grep -iE 'spawn|placement' | one 900)"
-          echo "::notice title=files:spawn-data::$(unzip -l client.jar | awk '{print $4}' | grep -iE '^data/minecraft/[a-z_]*spawn[a-z_]*' | head -8 | tr '\n' ' ' | one 700) DIRS=$(unzip -l client.jar | awk '{print $4}' | grep -E '^data/minecraft/[a-z_]+/$' | tr '\n' ' ' | one 900)"
-          echo "::notice title=json:loot-ore::$(unzip -p client.jar data/minecraft/loot_table/blocks/diamond_ore.json 2>&1 | tr -d '\n' | tr -s ' ' | one 1600)"
-          echo "::notice title=json:loot-entity::$(unzip -p client.jar data/minecraft/loot_table/entities/allay.json 2>&1 | tr -d '\n' | tr -s ' ' | one 1200)"
-          echo "::notice title=files:loot-entities::$(unzip -l client.jar | awk '{print $4}' | grep -E '^data/minecraft/loot_table/entities/' | head -8 | tr '\n' ' ' | one 700)"
-          echo "::notice title=json:loot-ash::$(unzip -p client.jar data/minecraft/loot_table/blocks/suspicious_sand.json 2>&1 | tr -d '\n' | tr -s ' ' | one 1200)"
-          echo "::notice title=javap:LootItem::$(javap -cp $CP 'net.minecraft.world.level.storage.loot.entries.LootItem' 2>&1 | grep -E 'public|Codec' | one 1200)"
-          echo "::notice title=javap:LootPool::$(javap -cp $CP 'net.minecraft.world.level.storage.loot.LootPool$Builder' 2>&1 | grep -E 'public' | one 1200)"
+          echo "::notice title=javap:SpawnPredicate::$(javap -cp client.jar 'net.minecraft.world.entity.SpawnPlacements$SpawnPredicate' 2>&1 | one 1200)"
+          echo "::notice title=javap:SpawnPlacementType::$(javap -cp client.jar net.minecraft.world.entity.SpawnPlacementType 2>&1 | one 900)"
 
       - name: upload artifact
         uses: actions/upload-artifact@v7

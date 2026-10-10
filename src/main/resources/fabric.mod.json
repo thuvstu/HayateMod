@@ -3,7 +3,7 @@
 	"id": "hayatemod",
 	"version": "${version}",
 	"name": "Hayate Mod",
-	"description": "疾風 (Hayate / gale) themed sample mod: gale dust, gale ingots, a lamp, a charm and a command - built for unobfuscated Minecraft 26.3 + Fabric.",
+	"description": "疾風 (Hayate / gale) themed sample mod for unobfuscated Minecraft 26.3 + Fabric: gale items, tools and armour, a gale trim material, two gale biomes (Nether + End), the gale spirit, the Gale Ruins, gale enchantments and a command.",
 	"authors": [
 		"thuvstu"
 	],
