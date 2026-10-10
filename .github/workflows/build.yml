@@ -57,7 +57,10 @@ jobs:
         # `build` is all the mod needs to ship, but the client source set is easy to
         # forget: compile it explicitly so a broken renderer fails here instead of
         # in someone's world.
-        run: ./gradlew compileClientJava --console=plain
+        run: |
+          set -o pipefail
+          mkdir -p build/ci
+          ./gradlew compileClientJava --console=plain 2>&1 | tee build/ci/client-log.txt
 
       - name: build
         run: |
@@ -109,8 +112,10 @@ jobs:
           # step, ~4k characters each, which is enough for a javac error list.
           python3 - <<'PY'
           import pathlib, re
-          log = pathlib.Path('build/ci/build-log.txt')
-          text = log.read_text(errors='replace') if log.exists() else ''
+          # every gradle step tees into build/ci, so read whichever logs exist
+          ci = pathlib.Path('build/ci')
+          text = '\n'.join(path.read_text(errors='replace')
+                           for path in sorted(ci.glob('*.txt'))) if ci.is_dir() else ''
           raw = text.splitlines()
           lines = []
           for index, line in enumerate(raw):
