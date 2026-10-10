@@ -1,9 +1,7 @@
 {
 	"type": "minecraft:smelting",
 	"category": "misc",
-	"ingredient": {
-		"item": "hayatemod:gale_dust"
-	},
+	"ingredient": "hayatemod:gale_dust",
 	"result": {
 		"id": "hayatemod:gale_ingot",
 		"count": 1

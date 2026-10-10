@@ -1,0 +1,14 @@
+{
+	"layers": {
+		"humanoid": [
+			{
+				"texture": "hayatemod:gale"
+			}
+		],
+		"humanoid_leggings": [
+			{
+				"texture": "hayatemod:gale"
+			}
+		]
+	}
+}

@@ -2,30 +2,14 @@
 	"type": "minecraft:crafting_shapeless",
 	"category": "misc",
 	"ingredients": [
-		{
-			"item": "hayatemod:gale_ingot"
-		},
-		{
-			"item": "hayatemod:gale_ingot"
-		},
-		{
-			"item": "hayatemod:gale_ingot"
-		},
-		{
-			"item": "hayatemod:gale_ingot"
-		},
-		{
-			"item": "hayatemod:gale_dust"
-		},
-		{
-			"item": "hayatemod:gale_dust"
-		},
-		{
-			"item": "hayatemod:gale_dust"
-		},
-		{
-			"item": "hayatemod:gale_dust"
-		}
+		"hayatemod:gale_ingot",
+		"hayatemod:gale_ingot",
+		"hayatemod:gale_ingot",
+		"hayatemod:gale_ingot",
+		"hayatemod:gale_dust",
+		"hayatemod:gale_dust",
+		"hayatemod:gale_dust",
+		"hayatemod:gale_dust"
 	],
 	"result": {
 		"id": "hayatemod:gale_orb"

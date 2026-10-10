@@ -13,7 +13,8 @@
    "absolute": 96
   }
  },
- "start_pool": "hayatemod:gale_ruins/start",
- "step": "underground_decoration",
- "terrain_adaptation": "beard_thin"
+  "start_pool": "hayatemod:gale_ruins/start",
+  "step": "underground_decoration",
+  "terrain_adaptation": "beard_thin",
+  "use_expansion_hack": false
 }

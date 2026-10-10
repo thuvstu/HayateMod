@@ -28,7 +28,7 @@ public final class ModArmorMaterials {
 	private ModArmorMaterials() {
 	}
 
-	/** Registered by {@code data/hayatemod/equipment/gale.json}. */
+	/** Registered by {@code assets/hayatemod/equipment/gale.json} (client resources). */
 	public static final ResourceKey<EquipmentAsset> GALE_ASSET = ResourceKey.create(
 			EquipmentAssets.ROOT_ID, HayateMod.id("gale"));
 

@@ -36,7 +36,7 @@ def fail(message: str) -> None:
 
 def load_json(path: pathlib.Path):
 	try:
-		return json.loads(path.read_text())
+		return json.loads(path.read_text(encoding="utf-8"))
 	except Exception as exc:  # noqa: BLE001 - report and continue
 		fail(f"{path.relative_to(ROOT)}: invalid json ({exc})")
 		return None

@@ -2,14 +2,12 @@
 	"type": "minecraft:crafting_shaped",
 	"category": "equipment",
 	"pattern": [
-		"I.I",
+		"I I",
 		"III",
 		"III"
 	],
 	"key": {
-		"I": {
-			"item": "hayatemod:gale_ingot"
-		}
+		"I": "hayatemod:gale_ingot"
 	},
 	"result": {
 		"id": "hayatemod:gale_chestplate"

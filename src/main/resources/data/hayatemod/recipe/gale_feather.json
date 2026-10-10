@@ -2,12 +2,8 @@
 	"type": "minecraft:crafting_shapeless",
 	"category": "misc",
 	"ingredients": [
-		{
-			"item": "minecraft:feather"
-		},
-		{
-			"item": "hayatemod:gale_dust"
-		}
+		"minecraft:feather",
+		"hayatemod:gale_dust"
 	],
 	"result": {
 		"id": "hayatemod:gale_feather",
