@@ -39,6 +39,11 @@ replay_*.log
 *.hprof
 *.jfr
 
+# python
+
+__pycache__/
+*.pyc
+
 # CI scratch output (probe / build logs committed by GitHub Actions)
 
 ci-out/

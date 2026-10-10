@@ -218,22 +218,22 @@ jobs:
           echo "--- done ---"
           ls -la
 
-      - name: emit flying mob and loot table signatures
+      - name: emit spawn placement and loot table details
         run: |
           set +e
           cd ci-out
           CP="client.jar"
           one () { tr '\n' '~' | tr -s ' ' | head -c "$1"; }
-          echo "::notice title=javap:FlyingMoveControl::$(javap -cp $CP net.minecraft.world.entity.ai.control.FlyingMoveControl 2>&1 | one 900)"
-          echo "::notice title=javap:createRenderState::$(javap -cp $CP net.minecraft.client.renderer.entity.EntityRenderer 2>&1 | grep -iE 'createRenderState|extractRenderState' | one 900)"
-          echo "::notice title=javap:LayerDefinition2::$(javap -cp $CP net.minecraft.client.model.geom.builders.LayerDefinition 2>&1 | one 900)"
-          echo "::notice title=json:loot-chest::$(unzip -p client.jar data/minecraft/loot_table/chests/simple_dungeon.json 2>&1 | tr -d '\n' | tr -s ' ' | one 1400)"
-          echo "::notice title=json:loot-block-stone::$(unzip -p client.jar data/minecraft/loot_table/blocks/stone.json 2>&1 | tr -d '\n' | tr -s ' ' | one 1400)"
-          echo "::notice title=json:pool-trailruins::$(unzip -p client.jar data/minecraft/worldgen/template_pool/trail_ruins/tower/tower_bottom.json 2>&1 | tr -d '\n' | tr -s ' ' | one 1200)"
-          echo "::notice title=files:pool-elements::$(grep -rhoE 'element_type": *"[a-z_]+"' client.jar 2>/dev/null | sort -u | tr '\n' ' ' | one 600) GREP=$(unzip -p client.jar data/minecraft/worldgen/template_pool/ancient_city/structures/unknown_excavation.json 2>&1 | tr -d '\n' | tr -s ' ' | one 700)"
-          echo "::notice title=javap:BuiltInRegistries-entity::$(javap -cp $CP net.minecraft.core.registries.BuiltInRegistries 2>&1 | grep -iE 'ENTITY_TYPE|public static final net.minecraft.core.Registry' | one 1200)"
-          echo "::notice title=javap:Registry-register::$(javap -cp $CP net.minecraft.core.Registry 2>&1 | grep -E 'public static.*register' | one 1000)"
-          echo "::notice title=javap:HierarchicalModel::$(javap -cp $CP net.minecraft.client.model.HierarchicalModel 2>&1 | one 900)"
+          echo "::notice title=javap:SpawnPlacements-all::$(javap -p -cp $CP net.minecraft.world.entity.SpawnPlacements 2>&1 | one 1600)"
+          echo "::notice title=javap:SpawnPlacementTypes-all::$(javap -p -cp $CP net.minecraft.world.entity.SpawnPlacementTypes 2>&1 | one 1200)"
+          echo "::notice title=registries:spawn::$(javap -cp $CP net.minecraft.core.registries.Registries 2>&1 | grep -iE 'spawn|placement' | one 900)"
+          echo "::notice title=files:spawn-data::$(unzip -l client.jar | awk '{print $4}' | grep -iE '^data/minecraft/[a-z_]*spawn[a-z_]*' | head -8 | tr '\n' ' ' | one 700) DIRS=$(unzip -l client.jar | awk '{print $4}' | grep -E '^data/minecraft/[a-z_]+/$' | tr '\n' ' ' | one 900)"
+          echo "::notice title=json:loot-ore::$(unzip -p client.jar data/minecraft/loot_table/blocks/diamond_ore.json 2>&1 | tr -d '\n' | tr -s ' ' | one 1600)"
+          echo "::notice title=json:loot-entity::$(unzip -p client.jar data/minecraft/loot_table/entities/allay.json 2>&1 | tr -d '\n' | tr -s ' ' | one 1200)"
+          echo "::notice title=files:loot-entities::$(unzip -l client.jar | awk '{print $4}' | grep -E '^data/minecraft/loot_table/entities/' | head -8 | tr '\n' ' ' | one 700)"
+          echo "::notice title=json:loot-ash::$(unzip -p client.jar data/minecraft/loot_table/blocks/suspicious_sand.json 2>&1 | tr -d '\n' | tr -s ' ' | one 1200)"
+          echo "::notice title=javap:LootItem::$(javap -cp $CP 'net.minecraft.world.level.storage.loot.entries.LootItem' 2>&1 | grep -E 'public|Codec' | one 1200)"
+          echo "::notice title=javap:LootPool::$(javap -cp $CP 'net.minecraft.world.level.storage.loot.LootPool$Builder' 2>&1 | grep -E 'public' | one 1200)"
 
       - name: upload artifact
         uses: actions/upload-artifact@v7
