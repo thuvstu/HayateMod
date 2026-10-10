@@ -1,9 +1,6 @@
 package com.thuvstu.hayatemod.item;
 
-import java.util.function.Consumer;
-
 import net.minecraft.core.particles.ParticleTypes;
-import net.minecraft.network.chat.Component;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
@@ -11,8 +8,6 @@ import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.TooltipFlag;
-import net.minecraft.world.item.component.TooltipDisplay;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
@@ -66,11 +61,5 @@ public class GaleStaffItem extends Item {
 		ItemUsage.applyCooldownAndDamage(stack, user);
 
 		return InteractionResult.CONSUME;
-	}
-
-	@Override
-	public void appendHoverText(ItemStack stack, TooltipContext context, TooltipDisplay display,
-			Consumer<Component> tooltip, TooltipFlag flag) {
-		ItemUsage.addTooltip(tooltip, "itemTooltip.hayatemod.gale_staff");
 	}
 }

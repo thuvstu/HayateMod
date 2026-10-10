@@ -22,8 +22,10 @@ import net.minecraft.world.BossEvent;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.item.ItemEntity;
@@ -402,7 +404,7 @@ public final class EnenAzemichi implements ModInitializer {
 			}
 			picks.add(type);
 		}
-		picks.add(EnenEventType.SCAREROW);
+		picks.add(EnenEventType.SCARECROW);
 
 		int cursor = session.startZ() + Mth.floor((session.goalZ() - session.startZ()) * 0.08);
 		for (EnenEventType type : picks) {
@@ -517,7 +519,7 @@ public final class EnenAzemichi implements ModInitializer {
 		}
 
 		EnenEventType type = event.type();
-		if (type == EnenEventType.SCAREROW) {
+		if (type == EnenEventType.SCARECROW) {
 			this.exitRun(player, true);
 			return InteractionResult.CONSUME;
 		}
@@ -684,7 +686,7 @@ public final class EnenAzemichi implements ModInitializer {
 	private boolean applyTrain(ServerLevel level, ServerPlayer player, EnenSession session, int choice) {
 		if (choice == 0) {
 			// Boarding jumps 400 m forward, but the exit moves 800 m further away.
-			int targetZ = Mth.min(Mth.floor(player.getZ()) + METERS_TO_BLOCKS(400),
+			int targetZ = Math.min(Mth.floor(player.getZ()) + METERS_TO_BLOCKS(400),
 					session.goalZ() - 5);
 			player.teleport(new TeleportTransition(level,
 					new Vec3(session.centerX() + 0.5, session.surfaceY() + 1, targetZ),
@@ -912,7 +914,7 @@ public final class EnenAzemichi implements ModInitializer {
 	/** The base goal of the (clears + 1)-st run: the game's classic numbers. */
 	private static int baseGoal(int clears) {
 		int[] bases = {1500, 2500, 3500, 4949, 7979, 9999, 12345, 15000, 18000, 20000, MAX_METERS};
-		return Mth.min(bases[Mth.clamp(clears, 0, bases.length - 1)], MAX_METERS);
+		return Math.min(bases[Mth.clamp(clears, 0, bases.length - 1)], MAX_METERS);
 	}
 
 	/** Hands an item out; a full inventory drops the remainder at the player's feet. */
@@ -929,7 +931,7 @@ public final class EnenAzemichi implements ModInitializer {
 	private static int countOf(ServerPlayer player, Item item) {
 		int count = 0;
 		for (ItemStack stack : player.getInventory()) {
-			if (stack.getItem() == item.value()) {
+			if (stack.getItem() == item) {
 				count += stack.getCount();
 			}
 		}

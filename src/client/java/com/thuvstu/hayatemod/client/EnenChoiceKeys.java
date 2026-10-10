@@ -8,6 +8,7 @@ import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 
+import com.thuvstu.hayatemod.HayateMod;
 import com.thuvstu.hayatemod.azemichi.EnenChoiceC2SPayload;
 
 /**
@@ -19,12 +20,16 @@ import com.thuvstu.hayatemod.azemichi.EnenChoiceC2SPayload;
  * outside a run. Registered from {@link HayateModClient}.
  */
 public final class EnenChoiceKeys {
+	/** 26.x key categories are records; custom ones go through {@code register}. */
+	private static final KeyMapping.Category HAYATE_CATEGORY =
+			KeyMapping.Category.register(HayateMod.id("keys"));
+
 	public static final KeyMapping CHOICE_A = new KeyMapping("key.hayatemod.choice_a",
-			InputConstants.Type.KEYBOARD, InputConstants.KEY_1, "category.hayatemod.keys");
+			InputConstants.Type.KEYBOARD, InputConstants.KEY_1, HAYATE_CATEGORY);
 	public static final KeyMapping CHOICE_B = new KeyMapping("key.hayatemod.choice_b",
-			InputConstants.Type.KEYBOARD, InputConstants.KEY_2, "category.hayatemod.keys");
+			InputConstants.Type.KEYBOARD, InputConstants.KEY_2, HAYATE_CATEGORY);
 	public static final KeyMapping CHOICE_C = new KeyMapping("key.hayatemod.choice_c",
-			InputConstants.Type.KEYBOARD, InputConstants.KEY_3, "category.hayatemod.keys");
+			InputConstants.Type.KEYBOARD, InputConstants.KEY_3, HAYATE_CATEGORY);
 
 	private EnenChoiceKeys() {
 	}

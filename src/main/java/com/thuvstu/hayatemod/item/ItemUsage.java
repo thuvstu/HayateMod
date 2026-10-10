@@ -1,12 +1,13 @@
 package com.thuvstu.hayatemod.item;
 
-import java.util.function.Consumer;
+import java.util.List;
 
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.component.ItemLore;
 import net.minecraft.world.item.component.UseCooldown;
 
 /**
@@ -29,8 +30,9 @@ public final class ItemUsage {
 		stack.hurtAndBreak(1, user, user.getEquipmentSlotForItem(stack));
 	}
 
-	/** Adds a single aqua translation line to a tooltip. */
-	public static void addTooltip(Consumer<Component> tooltip, String key) {
-		tooltip.accept(Component.translatable(key).withStyle(ChatFormatting.AQUA));
+	/** A single aqua lore line: the data-driven replacement for overriding tooltips. */
+	public static ItemLore lore(String key) {
+		Component raw = Component.translatable(key);
+		return new ItemLore(List.of(raw), List.of(raw.copy().withStyle(ChatFormatting.AQUA)));
 	}
 }

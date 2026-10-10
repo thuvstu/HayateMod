@@ -60,7 +60,7 @@ public final class AzemichiTerrain {
 
 				BlockState top;
 				if (depth <= 1) {
-					top = Blocks.GRASS_PATH.defaultBlockState();
+					top = Blocks.DIRT_PATH.defaultBlockState();
 				} else if (paddy) {
 					top = random.nextBoolean() ? water
 							: Blocks.WHEAT.defaultBlockState().setValue(BlockStateProperties.AGE_7, random.nextInt(8));
@@ -111,7 +111,7 @@ public final class AzemichiTerrain {
 			int x = centerX + (random.nextBoolean() ? 5 : -5);
 			int height = 2 + random.nextInt(2);
 			for (int y = 0; y < height; y++) {
-				set(level, pos, x, surfaceY + 1 + y, z, Blocks.SUGARCANE.defaultBlockState());
+				set(level, pos, x, surfaceY + 1 + y, z, Blocks.SUGAR_CANE.defaultBlockState());
 			}
 		}
 
@@ -166,7 +166,7 @@ public final class AzemichiTerrain {
 	public static void buildTorii(Level level, int centerX, int surfaceY, int goalZ) {
 		clearTorii(level, centerX, surfaceY, goalZ);
 		BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
-		BlockState red = Blocks.RED_WOOL.defaultBlockState();
+		BlockState red = Blocks.WOOL.red().defaultBlockState();
 		int y = surfaceY + 1;
 
 		// pillars

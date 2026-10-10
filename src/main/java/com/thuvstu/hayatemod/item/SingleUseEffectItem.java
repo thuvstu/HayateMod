@@ -1,7 +1,6 @@
 package com.thuvstu.hayatemod.item;
 
 import java.util.List;
-import java.util.function.Consumer;
 
 import net.minecraft.network.chat.Component;
 import net.minecraft.sounds.SoundEvent;
@@ -11,9 +10,6 @@ import net.minecraft.world.InteractionResult;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
-import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.TooltipFlag;
-import net.minecraft.world.item.component.TooltipDisplay;
 import net.minecraft.world.level.Level;
 
 /**
@@ -64,11 +60,5 @@ public abstract class SingleUseEffectItem extends Item {
 		user.sendSystemMessage(Component.translatable(messageKey()));
 
 		return InteractionResult.CONSUME;
-	}
-
-	@Override
-	public void appendHoverText(ItemStack stack, TooltipContext context, TooltipDisplay display,
-			Consumer<Component> tooltip, TooltipFlag flag) {
-		ItemUsage.addTooltip(tooltip, tooltipKey());
 	}
 }

@@ -69,7 +69,8 @@ public final class ModItems {
 
 	/** Single-use item that grants Speed II for 30 seconds. See {@link GaleCharmItem}. */
 	public static final Item GALE_CHARM = register(ModItemIds.GALE_CHARM, GaleCharmItem::new,
-			new Item.Properties().stacksTo(16));
+			new Item.Properties().stacksTo(16)
+					.component(DataComponents.LORE, ItemUsage.lore("itemTooltip.hayatemod.gale_charm")));
 
 	// -------------------------------------------- second batch: gear and parts
 
@@ -97,7 +98,8 @@ public final class ModItems {
 	public static final Item GALE_STAFF = register(ModItemIds.GALE_STAFF, GaleStaffItem::new,
 			new Item.Properties()
 					.durability(256)
-					.component(DataComponents.USE_COOLDOWN, new UseCooldown(1.5F)));
+					.component(DataComponents.USE_COOLDOWN, new UseCooldown(1.5F))
+					.component(DataComponents.LORE, ItemUsage.lore("itemTooltip.hayatemod.gale_staff")));
 
 	/**
 	 * Right-click to blow everything in front of you away. See {@link GaleFanItem}.
@@ -108,7 +110,8 @@ public final class ModItems {
 	public static final Item GALE_FAN = register(ModItemIds.GALE_FAN, GaleFanItem::new,
 			new Item.Properties()
 					.durability(128)
-					.component(DataComponents.USE_COOLDOWN, new UseCooldown(3.0F)));
+					.component(DataComponents.USE_COOLDOWN, new UseCooldown(3.0F))
+					.component(DataComponents.LORE, ItemUsage.lore("itemTooltip.hayatemod.gale_fan")));
 
 	// --------------------------------------------- third batch: the gale armour
 
@@ -132,7 +135,8 @@ public final class ModItems {
 
 	/** Speed III for 45 seconds and Slow Falling, at the cost of the charm. */
 	public static final Item GREATER_GALE_CHARM = register(ModItemIds.GREATER_GALE_CHARM,
-			GreaterGaleCharmItem::new, new Item.Properties().stacksTo(16));
+			GreaterGaleCharmItem::new, new Item.Properties().stacksTo(16)
+					.component(DataComponents.LORE, ItemUsage.lore("itemTooltip.hayatemod.greater_gale_charm")));
 
 	// ---------------------------------------------------------- creative tab
 

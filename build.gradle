@@ -60,6 +60,7 @@ tasks.withType(JavaCompile).configureEach {
 	// Minecraft 26.3 requires Java 25.
 	it.options.release = 25
 	it.options.encoding = "UTF-8"
+	it.options.compilerArgs.add("-Xlint:deprecation")
 }
 
 java {

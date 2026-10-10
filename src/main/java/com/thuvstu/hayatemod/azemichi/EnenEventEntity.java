@@ -45,7 +45,7 @@ public class EnenEventEntity extends Mob {
 	public EnenEventEntity(EntityType<? extends EnenEventEntity> type, Level level) {
 		super(type, level);
 		this.setNoGravity(true);
-		this.setInvulnerable(true);
+		this.setPermanentlyInvulnerable(true);
 	}
 
 	/** Spawns the marker at {@code position} and hands it to the level. */
@@ -57,7 +57,7 @@ public class EnenEventEntity extends Mob {
 		entity.anchorY = position.y;
 		entity.anchorZ = position.z;
 		entity.applyName();
-		entity.moveTo(position.x, position.y, position.z, 0.0F, 0.0F);
+		entity.snapTo(position.x, position.y, position.z, 0.0F, 0.0F);
 		level.addFreshEntity(entity);
 		return entity;
 	}
@@ -90,7 +90,7 @@ public class EnenEventEntity extends Mob {
 		// Re-anchor against being pushed; the client-side copy is where vanilla
 		// renders the entity, so it must not snap there.
 		if (!this.level().isClientSide()) {
-			this.moveTo(this.anchorX, this.anchorY, this.anchorZ, this.getYRot(), this.getXRot());
+			this.snapTo(this.anchorX, this.anchorY, this.anchorZ, this.getYRot(), this.getXRot());
 		}
 	}
 
@@ -108,7 +108,7 @@ public class EnenEventEntity extends Mob {
 	}
 
 	@Override
-	protected void checkDespawn() {
+	public void checkDespawn() {
 		// the run cleanup (not distance) is what removes this entity
 	}
 
